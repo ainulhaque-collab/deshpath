@@ -15,9 +15,15 @@ window.initDeshPlanner = function initDeshPlanner(helpers) {
   const divisionIds = new Set(divisions.map(d => d.id));
   const saved = storage.get('trip', null);
   const draft = saved && typeof saved === 'object' ? saved : {};
-  let tripIds = [...new Set((Array.isArray(draft.destinations) ? draft.destinations : [])
+  let tripIds = [...new Set((Array.isArray(draft.destinations) ? draft.destinations : draft.destination ? [draft.destination] : [])
     .filter(id => districtById.has(id)))].slice(0, 7);
   let hasGeneratedPlan = false;
+  let routeMode = draft.routeMode === 'manual' ? 'manual' : 'optimized';
+  let roundTrip = draft.roundTrip === true;
+  let comfort = ['economy', 'balanced', 'comfort'].includes(draft.comfort) ? draft.comfort : 'balanced';
+  const preferences = document.createElement('div');
+  preferences.className = 'planner-preferences';
+  $('#tripChips').after(preferences);
 
   const numberValue = id => {
     const input = $('#' + id);
@@ -30,6 +36,7 @@ window.initDeshPlanner = function initDeshPlanner(helpers) {
     .sort((a, b) => districtName(a).localeCompare(districtName(b), tr('bn', 'en')));
   const option = (value, label, disabled = false) => `<option value="${esc(value)}"${disabled ? ' disabled' : ''}>${esc(label)}</option>`;
   const currentTrip = () => ({
+    version: 2,
     originDivision: originDivision.value,
     origin: origin.value,
     destinationDivision: destinationDivision.value,
@@ -37,7 +44,8 @@ window.initDeshPlanner = function initDeshPlanner(helpers) {
     destinations: [...tripIds],
     days: numberValue('days'),
     travelers: numberValue('travelers'),
-    budget: numberValue('budget')
+    budget: numberValue('budget'),
+    routeMode, roundTrip, comfort
   });
 
   function renderEmpty() {
@@ -87,9 +95,9 @@ window.initDeshPlanner = function initDeshPlanner(helpers) {
   }
 
   function renderTripChips() {
-    $('#tripChips').innerHTML = tripIds.length ? tripIds.map(id => {
+    $('#tripChips').innerHTML = tripIds.length ? tripIds.map((id, index) => {
       const name = districtName(districtById.get(id));
-      return `<span class="trip-chip">${esc(name)}<button type="button" data-remove-trip="${id}" aria-label="${esc(tr(name + ' ট্রিপ থেকে সরান', 'Remove ' + name + ' from trip'))}">${icon('x')}</button></span>`;
+      return `<span class="trip-chip"><b>${bn(index + 1)}.</b> ${esc(name)}<span class="trip-reorder"><button type="button" data-move-trip="${id}" data-direction="-1"${index === 0 ? ' disabled' : ''} aria-label="${esc(tr(name + ' আগে নিন', 'Move ' + name + ' earlier'))}">↑</button><button type="button" data-move-trip="${id}" data-direction="1"${index === tripIds.length - 1 ? ' disabled' : ''} aria-label="${esc(tr(name + ' পরে নিন', 'Move ' + name + ' later'))}">↓</button></span><button type="button" data-remove-trip="${id}" aria-label="${esc(tr(name + ' ট্রিপ থেকে সরান', 'Remove ' + name + ' from trip'))}">${icon('x')}</button></span>`;
     }).join('') : `<span class="trip-chips-hint">${tr('সর্বোচ্চ ৭টি জেলা যোগ করতে পারেন', 'Add up to 7 districts, across any divisions')}</span>`;
     renderDestinationOptions();
   }
@@ -155,15 +163,28 @@ window.initDeshPlanner = function initDeshPlanner(helpers) {
   }
 
   function routeOrder(ids, start) {
-    const remaining = [...ids], route = [];
-    let current = districtById.get(start);
-    while (remaining.length) {
-      remaining.sort((a, b) => distance(current, districtById.get(a)) - distance(current, districtById.get(b)));
-      const id = remaining.shift();
-      route.push(id);
-      current = districtById.get(id);
+    if (routeMode === 'manual') return [...ids];
+    // At most seven stops: evaluate all orders using district-centre straight lines.
+    let best = [...ids], bestLength = Infinity;
+    const originDistrict = districtById.get(start);
+    function visit(route, remaining, previous, length) {
+      if (length >= bestLength) return;
+      if (!remaining.length) {
+        const total = length + (roundTrip ? distance(previous, originDistrict) : 0);
+        if (total < bestLength) { bestLength = total; best = route; }
+        return;
+      }
+      remaining.forEach((id, index) => visit([...route, id], remaining.filter((_, i) => i !== index), districtById.get(id), length + distance(previous, districtById.get(id))));
     }
-    return route;
+    visit([], ids, originDistrict, 0);
+    return best;
+  }
+
+  function renderPreferences() {
+    preferences.innerHTML = `<label class="field-label" for="routeMode">${tr('রুটের ক্রম', 'Route order')}</label><select id="routeMode"><option value="optimized">${tr('দূরত্ব অনুযায়ী সাজান', 'Optimize approximate distance')}</option><option value="manual">${tr('আমার সাজানো ক্রম', 'My manual order')}</option></select><p class="preference-note">${tr('তীরচিহ্নে জেলার ক্রম বদলাতে পারেন। অপ্টিমাইজ করতে জেলার কেন্দ্রের সরলরেখার দূরত্ব ব্যবহার হয়।', 'Use the arrows to reorder districts. Optimization uses straight-line distances between district centres.')}</p><label class="round-trip-option"><input type="checkbox" id="roundTrip">${tr('শেষে শুরুর জেলায় ফিরব', 'Return to the starting district')}</label><label class="field-label" for="comfortTier">${tr('বাজেট ভাগের ধরন', 'Budget allocation style')}</label><select id="comfortTier"><option value="economy">${tr('সাশ্রয়ী · যাতায়াতে বেশি রাখি', 'Economy · allow more for transport')}</option><option value="balanced">${tr('ভারসাম্য · থাকা ও যাতায়াত', 'Balanced · stay and transport')}</option><option value="comfort">${tr('আরাম · থাকার জন্য বেশি রাখি', 'Comfort · allow more for the stay')}</option></select><p class="preference-note">${tr('আপনার দেওয়া বাজেট থেকেই খসড়া ভাগ হবে; কোনো হোটেল বা ভাড়ার বাজারদর নয়।', 'An estimate from your entered budget, not market prices or a hotel quotation.')}</p>`;
+    $('#routeMode').value = routeMode;
+    $('#roundTrip').checked = roundTrip;
+    $('#comfortTier').value = comfort;
   }
 
   function renderPlan() {
@@ -184,18 +205,22 @@ window.initDeshPlanner = function initDeshPlanner(helpers) {
           : tr('শহর ও আশপাশের স্থানীয় আকর্ষণ, খাবার ও সংস্কৃতি আবিষ্কার করুন। স্থানীয়দের পরামর্শ নিয়ে যাতায়াত ঠিক করুন।', 'Discover the town, nearby attractions, food and culture. Ask local people for advice on getting around.');
       return { heading, body, foods: districtFoods(id) };
     });
-    const budgetLabels = [[tr('যাতায়াত', 'Transport'), .35], [tr('থাকা', 'Stay'), .30], [tr('খাবার', 'Food'), .25], [tr('অন্যান্য', 'Other'), .10]];
+    const shares = { economy: [.35, .25, .25, .15], balanced: [.30, .35, .25, .10], comfort: [.20, .45, .25, .10] }[comfort];
+    const budgetLabels = [tr('যাতায়াত', 'Transport'), tr('থাকা', 'Stay'), tr('খাবার', 'Food'), tr('অতিরিক্ত রাখুন', 'Reserve')].map((label, index) => [label, shares[index]]);
+    const routeWithOrigin = [trip.origin, ...route, ...(roundTrip ? [trip.origin] : [])];
+    const routeDistance = routeWithOrigin.slice(1).reduce((sum, id, index) => sum + distance(districtById.get(routeWithOrigin[index]), districtById.get(id)), 0);
     result.innerHTML = `<div class="plan-ready"><div class="plan-heading"><div><div class="eyebrow">${tr('আপনার ভ্রমণের খসড়া', 'Your travel draft')}</div>
       <h3>${tr(bn(trip.days) + ' দিনের একটু ছুটি', 'A ' + bn(trip.days) + '-day getaway')}</h3></div>
       <button type="button" class="plan-print" id="printPlan">${icon('print')} ${tr('প্রিন্ট / PDF', 'Print / PDF')}</button></div>
       <div class="plan-meta"><span>${icon('calendar')} ${bn(trip.days)} ${tr('দিন', 'days')}</span>
       <span>${icon('users')} ${bn(trip.travelers)} ${tr('জন', trip.travelers === 1 ? 'traveler' : 'travelers')}</span>
       <span>${bn(route.length)} ${tr('টি জেলা', route.length === 1 ? 'district' : 'districts')}</span></div>
-      <div class="plan-route">${icon('map-pin')} ${[trip.origin, ...route].map(id => esc(districtName(districtById.get(id)))).join(' <span aria-hidden="true">→</span> ')}</div>
+      <div class="plan-route">${icon('map-pin')} ${routeWithOrigin.map(id => esc(districtName(districtById.get(id)))).join(' <span aria-hidden="true">→</span> ')}</div>
+      <p class="route-explanation">${routeMode === 'manual' ? tr('আপনার সাজানো ক্রম', 'Your manual order') : tr('জেলার কেন্দ্রের সরলরেখার হিসাবে সর্বনিম্ন দূরত্বের ক্রম', 'Shortest order by straight-line district-centre distances')} · ${tr('আনুমানিক ', 'Approximately ')}${bn(Math.round(routeDistance))} ${tr('কিমি', 'km')}${roundTrip ? tr(' · ফিরতি পথসহ', ' · including return') : ''}<br>${tr('এটি সড়কপথের দূরত্ব বা যাত্রার সময় নয়।', 'This is not road distance or travel time.')}</p>
       <div class="itinerary">${itinerary.map((day, index) => `<div class="itinerary-day"><div class="day-number">${tr('দিন', 'Day')}<b>${bn(index + 1)}</b></div>
       <div class="day-content"><h4>${esc(day.heading)}</h4><p>${esc(day.body)}</p>
       ${day.foods.length ? `<div class="itinerary-food">${icon('utensils')}<span>${tr('জেলার স্বাদ: ', 'Local tastes: ')}${day.foods.map(item => esc(foodText(item, 'name'))).join(' · ')}</span></div>` : ''}</div></div>`).join('')}</div>
-      <div class="plan-budget"><div class="plan-budget-heading"><span>${tr('আপনার দেওয়া মোট বাজেট', 'Your total budget')}</span><strong>${money(trip.budget)}</strong></div>
+      <div class="plan-budget"><div class="plan-budget-heading"><span>${tr('আপনার দেওয়া মোট বাজেট', 'Your total budget')}</span><strong>${money(trip.budget)}</strong></div><p class="budget-per-day">${tr('জনপ্রতি প্রতিদিনের খসড়া বরাদ্দ: ', 'Draft allowance per person per day: ')}<strong>${money(trip.budget / trip.days / trip.travelers)}</strong> · ${tr({ economy: 'সাশ্রয়ী', balanced: 'ভারসাম্য', comfort: 'আরাম' }[comfort], { economy: 'Economy', balanced: 'Balanced', comfort: 'Comfort' }[comfort])}</p>
       <div class="budget-parts">${budgetLabels.map(([label, share]) => `<div class="budget-part">${label} · ${bn(Math.round(share * 100))}%<strong>${money(trip.budget * share)}</strong></div>`).join('')}</div></div>
       <p class="plan-limit">${tr('বাজেটের ভাগ একটি প্রস্তাব, প্রকৃত ভাড়া বা বুকিং মূল্য নয়। রুটটি জেলার আনুমানিক অবস্থান অনুযায়ী সাজানো; সড়কপথ ও যাতায়াতের সময় যাচাই করুন। বিশেষত পাহাড়, বন ও দ্বীপে প্রবেশের বর্তমান নিয়ম জেনে নিন।', 'The budget breakdown is a suggestion, not a live fare or booking quote. The route uses approximate district locations; check road routes and travel times. Check current entry rules, especially for hills, forests and islands.')}</p></div>`;
     $('#printPlan').addEventListener('click', () => window.print());
@@ -219,6 +244,7 @@ window.initDeshPlanner = function initDeshPlanner(helpers) {
     renderOriginOptions();
     renderDivisionOptions(destinationDivision);
     renderTripChips();
+    renderPreferences();
     $('#days').placeholder = tr('যেমন: ৩', 'e.g. 3');
     $('#travelers').placeholder = tr('যেমন: ২', 'e.g. 2');
     $('#budget').placeholder = tr('যেমন: ১৫০০০', 'e.g. 15000');
@@ -267,10 +293,28 @@ window.initDeshPlanner = function initDeshPlanner(helpers) {
   });
   $('#addDestination').addEventListener('click', () => addTrip(destination.value));
   $('#tripChips').addEventListener('click', event => {
+    const move = event.target.closest('[data-move-trip]');
+    if (move) {
+      const index = tripIds.indexOf(move.dataset.moveTrip), next = index + Number(move.dataset.direction);
+      if (index >= 0 && next >= 0 && next < tripIds.length) {
+        [tripIds[index], tripIds[next]] = [tripIds[next], tripIds[index]];
+        routeMode = 'manual';
+        renderTripChips(); renderPreferences(); saveTrip();
+        const moved = $(`[data-move-trip="${move.dataset.moveTrip}"][data-direction="${move.dataset.direction}"]`);
+        if (moved && !moved.disabled) moved.focus();
+      }
+      return;
+    }
     const button = event.target.closest('[data-remove-trip]');
     if (!button) return;
     tripIds = tripIds.filter(id => id !== button.dataset.removeTrip);
     renderTripChips();
+    saveTrip();
+  });
+  preferences.addEventListener('change', event => {
+    if (event.target.id === 'routeMode') routeMode = event.target.value === 'manual' ? 'manual' : 'optimized';
+    if (event.target.id === 'roundTrip') roundTrip = event.target.checked;
+    if (event.target.id === 'comfortTier') comfort = event.target.value;
     saveTrip();
   });
   numericIds.forEach(id => $('#' + id).addEventListener('input', () => {

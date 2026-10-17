@@ -1,0 +1,69 @@
+/* Deshpath's original transparent expedition-journal overlay. */
+.journey-art {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.dp-art-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.dp-art-contours { opacity: .22; }
+.dp-art-compass-orbit {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation: dp-art-compass-orbit 28s linear infinite;
+}
+.dp-art-needle {
+  transform-origin: 0 0;
+  animation: dp-art-needle-settle 12s ease-in-out infinite;
+}
+.dp-art-route-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: dp-art-draw-route 1.9s cubic-bezier(.22,.61,.36,1) both;
+}
+.dp-art-waypoint-one { animation: dp-art-waypoint-appear .6s ease-out .1s both; }
+.dp-art-waypoint-two { animation: dp-art-waypoint-appear .6s ease-out .9s both; }
+.dp-art-waypoint-three { animation: dp-art-waypoint-appear .6s ease-out 1.7s both; }
+.dp-art-waypoint-ring { animation: dp-art-marker-breathe 5s ease-in-out 2s infinite; }
+.dp-art-profile-point { animation: dp-art-profile-glow 6s ease-in-out infinite; }
+.dp-art-field-card { animation: dp-art-field-appear 1s cubic-bezier(.22,.61,.36,1) .2s both; }
+.dp-art-coordinate-mark { opacity: .72; }
+
+.dp-art-is-paused *, .dp-art-is-paused *::before, .dp-art-is-paused *::after {
+  animation-play-state: paused !important;
+}
+
+@keyframes dp-art-compass-orbit { to { transform: rotate(360deg); } }
+@keyframes dp-art-needle-settle {
+  0%, 100% { transform: rotate(25deg); }
+  35% { transform: rotate(33deg); }
+  70% { transform: rotate(21deg); }
+}
+@keyframes dp-art-draw-route { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes dp-art-waypoint-appear { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dp-art-marker-breathe { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+@keyframes dp-art-profile-glow { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }
+@keyframes dp-art-field-appear { from { opacity: 0; } to { opacity: 1; } }
+
+@media (max-width: 640px) {
+  .dp-art-contours { opacity: .18; }
+  .dp-art-frame { opacity: .55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-art *, .journey-art *::before, .journey-art *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .dp-art-route-line { stroke-dashoffset: 0; }
+  .dp-art-needle { transform: rotate(25deg); }
+}

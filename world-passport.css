@@ -1,0 +1,124 @@
+/* Original Deshpath atlas and ticket-stamp journal, using the shared palette. */
+#worldPassportRoot{--wp-selected:var(--brand);margin-top:96px;scroll-margin-top:110px}
+.wp-atlas,.wp-passport{scroll-margin-top:110px;margin:0 auto 90px;max-width:1440px}
+.wp-section-head{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:30px}
+.wp-section-head h2{font-size:clamp(32px,3.4vw,52px);line-height:1.2;margin:12px 0;color:var(--text);letter-spacing:-1.2px}
+.wp-section-head p{max-width:670px;margin:0;color:var(--text-muted);font-size:16px;line-height:1.8}
+.wp-title-dot{color:var(--accent)}
+.wp-section-head>.button{flex-shrink:0}
+.wp-atlas-layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr);overflow:hidden;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
+.wp-map-card{min-width:0;display:flex;flex-direction:column;position:relative;background:linear-gradient(155deg,var(--surface) 45%,var(--brand-soft));padding:36px 24px 22px;border-right:1px solid var(--border)}
+.wp-map-caption{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;min-height:126px}
+.wp-folio{font-family:Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--text-muted)}
+.wp-map-caption strong{color:var(--text);font-size:27px;max-width:100%;overflow-wrap:anywhere;font-weight:600}
+.wp-map-counter{color:var(--brand);font-size:13px}
+#wpMapCanvas{margin:auto -10px;min-width:0}
+.wp-world-svg{display:block;width:100%;height:auto;overflow:visible}
+.wp-country-shapes path{cursor:pointer;transition:filter .18s,opacity .18s;vector-effect:non-scaling-stroke}
+.wp-country-shapes path:hover{filter:brightness(.88)}
+.wp-country-shapes path:focus-visible{outline:none;stroke:var(--text);stroke-width:2}
+.wp-country-labels{pointer-events:none}
+.wp-map-bottom{display:flex;justify-content:space-between;gap:15px;margin-top:30px;font-size:10px;font-family:Arial,sans-serif;color:var(--text-muted);border-top:1px solid var(--border);padding-top:17px}
+.wp-controls{padding:30px;min-width:0}
+.wp-progress-head{display:flex;align-items:center;justify-content:space-between;color:var(--text-muted);font-size:13px}
+.wp-progress-head strong{display:block;font-size:29px;color:var(--brand);line-height:1.4;margin-top:4px}
+#wpWorldPercent{color:var(--brand);border:4px solid var(--brand-soft);border-radius:50%;width:58px;height:58px;display:grid;place-items:center;font-weight:700}
+.wp-progress-track{height:4px;border-radius:9px;background:var(--surface-soft);margin:18px 0 25px;overflow:hidden}
+.wp-progress-track>span{display:block;height:100%;background:var(--brand);transition:width .25s}
+.wp-field-label{font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:8px}
+.wp-field-label small{font-weight:400;color:var(--text-muted)}
+.wp-controls input:not([type=checkbox]),.wp-controls select{width:100%;height:45px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);padding:9px 12px;font:inherit;font-size:13px;min-width:0}
+.wp-controls input::placeholder{color:var(--text-subtle)}
+.wp-controls input:focus-visible,.wp-controls select:focus-visible,.wp-place-choice input:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.wp-theme-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--text);gap:14px;margin:18px 0}
+.wp-theme-row>div{display:flex;gap:7px}
+.wp-colour{width:27px;height:27px;border-radius:50%;border:4px solid var(--surface);background:var(--swatch);outline:1px solid transparent;cursor:pointer;position:relative}
+.wp-colour.active{outline-color:var(--swatch)}
+.wp-colour:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+.wp-checkbox-line,.wp-list-toolbar label{display:flex;align-items:center;gap:7px;color:var(--text-muted);font-size:12px;cursor:pointer}
+.wp-controls input[type=checkbox],.wp-place-choice input{accent-color:var(--brand);width:16px;height:16px;flex-shrink:0}
+.wp-country-filters{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:9px;margin-top:20px}
+.wp-search{position:relative;min-width:0}
+.wp-search>.icon{position:absolute;left:11px;top:14px;width:17px;height:17px;color:var(--text-muted)}
+.wp-search input{padding-left:34px!important}
+.wp-country-filters select{padding-right:5px}
+.wp-list-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--text-muted);font-size:11px;margin:16px 0 9px}
+.wp-list-toolbar label{font-size:11px}
+.wp-country-list{max-height:265px;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:5px;padding:2px 5px 4px 2px;scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+.wp-country-row{display:flex;align-items:center;gap:10px;padding:8px 10px;min-height:43px;border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:background .2s}
+.wp-country-row:hover{background:var(--surface-alt)}
+.wp-country-row.selected{background:var(--brand-soft);border-color:var(--border-strong)}
+.wp-country-row>span:first-of-type{font-size:13px;color:var(--text);line-height:1.4;flex:1}
+.wp-country-row small{display:block;color:var(--text-muted);font-size:10px;margin-top:2px}
+.wp-country-code{font-family:Arial,sans-serif;font-size:9px;letter-spacing:.6px;color:var(--text-muted)}
+.wp-empty-list{font-size:13px;color:var(--text-muted);padding:25px 10px;text-align:center}
+.wp-controls-actions{display:flex;flex-direction:column;gap:5px;margin-top:17px}
+.wp-controls-actions>.button{width:100%;font-size:13px;min-height:45px;padding:10px 12px}
+.wp-reset{align-self:center;font-size:11px;padding:6px 10px}
+.wp-reset:disabled{opacity:.4;cursor:default}
+.wp-coverage{font-size:10px;line-height:1.7;color:var(--text-muted);margin:8px 0 0}
+.wp-coverage a{display:inline-block;color:var(--brand);text-decoration:underline;text-underline-offset:2px}
+.wp-passport-tabs{display:flex;gap:5px;border-bottom:1px solid var(--border);margin-bottom:25px}
+.wp-passport-tabs button{border:0;background:transparent;color:var(--text-muted);font:inherit;font-size:15px;font-weight:600;padding:14px 22px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.wp-passport-tabs button[aria-selected=true]{color:var(--brand);border-bottom-color:var(--brand)}
+.wp-passport-tabs button>span{font-size:10px;margin-left:8px;border-radius:20px;padding:3px 7px;background:var(--surface-soft);color:var(--text-muted)}
+.wp-passport-tabs button:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+.wp-passport-layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:25px;align-items:start}
+.wp-passport-cover{position:sticky;top:105px;background:var(--brand-dark);color:var(--on-dark);border-radius:8px 22px 22px 8px;min-height:460px;padding:26px 26px 22px;box-shadow:inset 7px 0 0 rgb(255 255 255 / 5%),inset 9px 0 0 rgb(0 0 0 / 12%);border:1px solid var(--brand-dark);overflow:hidden;text-align:center}
+.wp-passport-cover:before{content:"";position:absolute;inset:11px;border:1px solid rgb(255 255 255 / 16%);border-radius:3px 15px 15px 3px;pointer-events:none}
+.wp-passport-cover-top{position:relative;display:flex;justify-content:space-between;gap:10px;font:9px Arial,sans-serif;letter-spacing:1.2px;color:var(--on-dark-muted)}
+.wp-passport-emblem{display:grid;place-items:center;width:88px;height:88px;border:1px solid rgb(255 255 255 / 25%);border-radius:50%;margin:35px auto 20px;color:var(--accent)}
+.wp-passport-emblem .icon{width:52px;height:52px;stroke-width:1}
+.wp-passport-kicker{font-size:10px;letter-spacing:1px;color:var(--on-dark-muted)}
+.wp-passport-cover h3{font-size:28px;line-height:1.3;margin:9px 0 12px;color:var(--on-dark);font-weight:500}
+.wp-passport-holder{font-size:14px;line-height:1.6;color:var(--on-dark-muted);overflow-wrap:anywhere}
+.wp-passport-tally{display:flex;justify-content:center;align-items:center;gap:10px;margin:25px 0;font-size:10px;color:var(--on-dark-muted)}
+.wp-passport-tally strong{font-size:34px;line-height:1;color:var(--accent)}
+.wp-passport-export{display:flex;flex-direction:column;gap:9px;position:relative;z-index:1}
+.wp-passport-export .button{background:var(--surface);color:var(--brand-dark);border-color:transparent;min-height:40px;padding:9px;font-size:12px}
+.wp-print-button{border:0;background:transparent;color:var(--on-dark);font:inherit;font-size:11px;display:flex;gap:7px;align-items:center;justify-content:center;padding:4px;cursor:pointer}
+.wp-print-button .icon{width:14px;height:14px}
+.wp-stamp-pages{min-width:0;background:var(--surface);border:1px solid var(--border);padding:26px;border-radius:var(--radius)}
+.wp-stamp-page-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;border-bottom:1px solid var(--border);padding-bottom:17px;margin-bottom:15px}
+.wp-stamp-page-heading h3{font-size:23px;margin:9px 0 0;color:var(--text);font-weight:600}
+.wp-stamp-page-heading>span{color:var(--brand);font-size:13px;flex-shrink:0}
+.wp-passport-note{font-size:13px;line-height:1.8;color:var(--text-muted);margin:15px 0}
+.wp-place-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;max-height:240px;overflow-y:auto;overscroll-behavior:contain;padding:2px 5px 5px 2px;scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+.wp-place-choice{display:flex;gap:8px;align-items:center;border:1px solid var(--border);border-radius:8px;padding:10px;cursor:pointer;font-size:12px;color:var(--text)}
+.wp-place-choice.selected{background:var(--brand-soft);border-color:var(--border-strong)}
+.wp-place-choice small{display:block;font-size:10px;color:var(--text-muted);margin-top:3px}
+.wp-back-to-atlas{display:inline-flex;gap:8px;align-items:center;font-size:13px;color:var(--brand);text-decoration:underline;text-underline-offset:3px;margin:0 0 12px}
+.wp-stamp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:30px;padding:5px}
+.wp-stamp{position:relative;transform:rotate(var(--stamp-tilt));border:1px dashed var(--brand);border-radius:8px 8px 16px 8px;color:var(--brand);padding:15px 14px 17px;background:var(--surface);min-width:0;min-height:208px;isolation:isolate}
+.wp-stamp:before{content:"";position:absolute;inset:5px;border:1px solid var(--brand-soft);border-radius:5px;pointer-events:none}
+.wp-stamp-line{display:flex;justify-content:space-between;align-items:center;font:8px Arial,sans-serif;letter-spacing:1.5px;gap:10px;position:relative}
+.wp-stamp-symbol{width:49px;height:49px;margin:20px auto 12px;border:1px solid var(--brand);border-radius:50%;display:grid;place-items:center;font-size:16px;font-weight:600;background:var(--brand-soft)}
+.wp-stamp h4{position:relative;text-align:center;font-size:16px;line-height:1.4;margin:5px 0;font-weight:600;overflow-wrap:anywhere}
+.wp-stamp p{text-align:center;font-size:10px;color:var(--text-muted);margin:4px 0 13px}
+.wp-stamp-status{display:flex;gap:4px;align-items:center;justify-content:center;font-size:8px;color:var(--text-muted)}
+.wp-stamp-status .icon{width:11px;height:11px;stroke-width:2}
+.wp-stamp-id{display:block;font:7px Arial,sans-serif;letter-spacing:.8px;opacity:.8;text-align:center;margin-top:9px}
+.wp-passport-empty{grid-column:1/-1;min-height:190px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px dashed var(--border-strong);border-radius:13px;background:var(--surface-alt);color:var(--text-muted);padding:25px}
+.wp-passport-empty>.icon{color:var(--brand);width:29px;height:29px}
+.wp-passport-empty h4{color:var(--text);font-size:19px;font-weight:500;margin:14px 0 7px}
+.wp-passport-empty p{font-size:12px;margin:0;line-height:1.8}
+.wp-local-note{font-size:10px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:16px;margin:25px 0 0}
+.wp-confirm{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:18px;padding:28px;width:min(500px,calc(100% - 32px));box-shadow:var(--shadow)}
+.wp-confirm::backdrop{background:rgb(32 39 51 / 55%);backdrop-filter:blur(4px)}
+.wp-confirm h3{font-size:24px;margin:0 0 12px;line-height:1.4}
+.wp-confirm p{font-size:14px;line-height:1.8;color:var(--text-muted)}
+.wp-confirm form>div,.wp-download-pages{display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap;margin:24px 0 0}
+.wp-confirm .button{font-size:13px;min-height:40px;padding:10px 16px}
+.wp-download-pages{justify-content:flex-start;max-height:50vh;overflow-y:auto;margin-bottom:20px}
+.wp-avatar-wrap{display:flex;justify-content:center;gap:10px;align-items:center;margin:12px 0 0}
+.wp-avatar{width:65px;height:65px;border-radius:50%;object-fit:cover;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--border)}
+.wp-avatar-controls{display:flex;align-items:center;gap:12px;margin:13px 0;color:var(--text-muted);font-size:11px}
+.wp-avatar-controls label{cursor:pointer;display:inline-flex;align-items:center;color:var(--brand);text-decoration:underline;text-underline-offset:3px}
+.wp-avatar-controls input{width:1px!important;height:1px!important;position:absolute;opacity:0;padding:0!important}
+.wp-avatar-controls label:focus-within{outline:2px solid var(--focus);outline-offset:4px}
+.wp-avatar-controls button{font:inherit;border:0;background:none;color:var(--text-muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+@media(min-width:1600px){#worldPassportRoot{padding:0}}
+@media(max-width:1050px){.wp-atlas-layout{grid-template-columns:minmax(0,1.2fr) minmax(310px,1fr)}.wp-controls{padding:24px}.wp-map-card{padding:26px 15px 20px}.wp-map-caption strong{font-size:23px}.wp-passport-layout{grid-template-columns:245px minmax(0,1fr);gap:20px}.wp-stamp-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.wp-passport-cover{padding:25px 21px}.wp-country-filters{grid-template-columns:1fr}.wp-section-head>.button{font-size:12px;padding:10px 15px}}
+@media(max-width:760px){#worldPassportRoot{margin-top:65px}.wp-atlas,.wp-passport{margin-bottom:65px}.wp-section-head{align-items:start;flex-direction:column;gap:17px}.wp-section-head h2{font-size:34px}.wp-section-head p{font-size:14px}.wp-atlas-layout{grid-template-columns:1fr}.wp-map-card{border-right:0;border-bottom:1px solid var(--border);min-height:340px;padding:24px 15px 20px}.wp-map-caption{min-height:88px;gap:4px}.wp-map-caption strong{font-size:23px}.wp-world-svg{min-height:180px}.wp-map-bottom{margin-top:5px;font-size:8px}#wpMapCanvas{margin:0 -10px}.wp-controls{padding:23px}.wp-country-filters{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}.wp-country-list{max-height:245px}.wp-passport-layout{grid-template-columns:1fr}.wp-passport-cover{position:relative;top:0;min-height:0;max-width:360px;width:100%;justify-self:center;padding-bottom:25px}.wp-passport-emblem{margin:25px auto 18px;width:70px;height:70px}.wp-passport-cover h3{font-size:27px}.wp-passport-tally{margin:20px 0}.wp-passport-export{flex-direction:row;justify-content:center;gap:18px}.wp-passport-export>.button{min-width:120px}.wp-stamp-pages{padding:20px}.wp-stamp-grid{gap:13px;padding:4px}.wp-stamp{padding:13px 9px 14px;min-height:200px}.wp-stamp h4{font-size:14px}.wp-stamp-line{font-size:7px;letter-spacing:1px}.wp-passport-tabs button{font-size:13px;padding:12px 13px}.wp-passport-tabs button>span{margin-left:5px}.wp-place-picker{gap:6px}.wp-place-choice{font-size:11px;padding:8px}.wp-stamp-page-heading h3{font-size:21px}.wp-passport-note{font-size:12px}.wp-folio{font-size:9px;letter-spacing:1.5px}}
+@media(max-width:390px){.wp-controls{padding:18px}.wp-country-filters{grid-template-columns:1fr}.wp-passport-tabs button{padding:12px 9px;font-size:12px}.wp-place-picker{grid-template-columns:1fr}.wp-stamp-pages{padding:17px}.wp-stamp-grid{grid-template-columns:1fr}.wp-stamp{max-width:260px;width:100%;justify-self:center}.wp-map-bottom{font-size:7px}.wp-stamp-page-heading>span{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.wp-country-shapes path,.wp-country-row,.wp-progress-track>span{transition:none}}

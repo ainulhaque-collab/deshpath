@@ -1,0 +1,34 @@
+'use strict';
+const assert=require('node:assert/strict');
+global.window={};
+require('../data.js');require('../world-data.js');
+const store=new Map([['deshpath.gamesRecords',JSON.stringify({photo:815,'puzzle-easy':43})]]);
+global.localStorage={get length(){return store.size},key:i=>[...store.keys()][i],getItem:key=>store.get(key)||null};
+require('../journal-kit.js');
+const kit=window.DESH_JOURNAL;
+const media={id:'map-safe',src:'data:image/png;base64,AA==',width:100,height:80,bytes:1,box:{x:0,y:0,width:40,height:50},zoom:1,panX:50,panY:50};
+const draft={id:'draft-safe',kind:'place',district:'dhaka',title:'A real discovery',area:'Old Dhaka',description:'A'.repeat(50),directions:'B'.repeat(20),notes:'',author:'Tester',createdAt:'2026-10-18T05:00:00.000Z',photoId:'map-safe'};
+const review={id:'review-safe',placeId:'sreemangal',rating:4,body:'Good visit notes',createdAt:draft.createdAt,photoId:null};
+const backup=()=>({app:'deshpath',version:1,values:{visited:['dhaka'],favorites:['sreemangal'],passportPlaces:['sreemangal'],worldVisited:[window.DESH_WORLD.countries[0].id],mapStyle:'personal',mapAvatar:{src:media.src,width:80,height:80},photoAssignments:{dhaka:media.id},profile:{name:'Test',bio:''},contributions:[draft],reviews:[review],gamesRecords:{photo:815,'puzzle-easy':43},trip:{version:2,origin:'dhaka',destinations:['sylhet'],days:3,travelers:2,budget:15000,roundTrip:true,comfort:'balanced',routeMode:'manual'}},media:[media]});
+let count=0;
+function pass(name,mutate,accept=false){const data=structuredClone(backup());mutate(data);if(accept)assert.doesNotThrow(()=>kit.validateBackup(data),name);else assert.throws(()=>kit.validateBackup(data),/BACKUP_INVALID/,name);count++;}
+assert.doesNotThrow(()=>kit.validateBackup(backup()));count++;
+assert.deepEqual(kit.readValues().gamesRecords,{photo:815,'puzzle-easy':43});count++;
+pass('reject attribute-injection contribution id',b=>b.values.contributions[0]={...draft,id:'x"><img src=x onerror=alert(1)>'});
+pass('reject attribute-injection review id',b=>b.values.reviews[0]={...review,id:'x" autofocus onfocus=alert(1)'});
+pass('reject external avatar URLs',b=>b.values.mapAvatar.src='https://example.com/track.jpg');
+pass('reject SVG image source',b=>b.media[0]={...media,src:'data:image/svg+xml;base64,AA=='});
+pass('reject missing image dimensions',b=>delete b.media[0].width);
+pass('reject non-finite geometry',b=>b.media[0]={...media,box:{x:Infinity,y:0,width:2,height:2}});
+pass('reject invalid zoom',b=>b.media[0]={...media,zoom:99});
+pass('reject invalid crop',b=>b.media[0]={...media,panY:-1});
+pass('reject missing place',b=>b.values.reviews[0]={...review,placeId:'invented'});
+pass('reject unknown district',b=>b.values.visited=['invalid']);
+pass('reject duplicate selected districts',b=>b.values.visited=['dhaka','dhaka']);
+pass('reject unknown world id',b=>b.values.worldVisited=['invented']);
+pass('reject invalid rating',b=>b.values.reviews[0]={...review,rating:100});
+pass('reject unknown game key',b=>b.values.gamesRecords={injected:99});
+pass('accept null empty-trip inputs',b=>b.values.trip={origin:'',destinations:[],days:null,travelers:null,budget:null},true);
+pass('accept supported maximum active-media count above old200',b=>b.media=Array.from({length:266},(_,i)=>({...media,id:'map-'+i})),true);
+console.log('Journal backup checks passed:',count);
+

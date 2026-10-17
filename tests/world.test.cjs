@@ -1,0 +1,44 @@
+const fs=require('node:fs');
+const path=require('node:path');
+const vm=require('node:vm');
+const assert=require('node:assert/strict');
+const repo=path.resolve(__dirname,'..');
+const elements=new Map(),events={},saved=new Map(),listeners=[],emitted=[];
+function element(id){if(elements.has(id))return elements.get(id);const value={id,innerHTML:'',textContent:'',style:{},dataset:{},classList:{toggle(){}},addEventListener(name,callback){(this.events??={})[name]=callback;},setAttribute(name,value){this[name]=value;},getAttribute(name){return this[name];},before(){},after(){},focus(){},querySelector(q){return element(q);},querySelectorAll(q){return q==='[data-passport-tab]'?[element('bd-tab'),element('world-tab')]:[];}};elements.set(id,value);return value;}
+const root=element('#worldPassportRoot');root.addEventListener=(name,callback)=>events[name]=callback;
+element('bd-tab').dataset.passportTab='bangladesh';element('world-tab').dataset.passportTab='world';
+let language='en';
+const context={window:{DESH_I18N:{get lang(){return language;},onChange(callback){listeners.push(callback);}},addEventListener(){},dispatchEvent(event){emitted.push(event.type);}},document:{documentElement:{},querySelector:q=>element(q),createElement:tag=>element('new-'+tag),fonts:{ready:Promise.resolve()}},getComputedStyle:()=>({getPropertyValue:()=>''}),CustomEvent:class{constructor(type,options){this.type=type;this.detail=options.detail;}},console,Map,Set,Intl,Math,String,Number,Array,Object};
+vm.createContext(context);
+for(const file of ['data.js','content-en.js','world-data.js','world-passport.js'])vm.runInContext(fs.readFileSync(path.join(repo,file),'utf8'),context,{filename:file});
+const world=context.window.DESH_WORLD,data=context.window.DESH_DATA;
+assert.equal(world.countries.length,241);assert.equal(new Set(world.countries.map(c=>c.id)).size,241);
+for(const area of world.countries){assert.ok(area.d.startsWith('M')&&area.d.endsWith('Z'));assert.ok(area.bn&&area.en);assert.ok(Number.isFinite(area.x)&&Number.isFinite(area.y));assert.ok(!/NaN|Infinity/.test(area.d));}
+assert.equal(data.places.length,16);assert.equal(world.countries.find(c=>c.id==='BGD').continent,'Asia');assert.ok(!world.countries.some(c=>c.id==='ATA'));
+saved.set('worldVisited',['BGD','INVALID','JPN']);saved.set('passportPlaces',[data.places[0].id,'missing']);
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const tr=(b,e)=>language==='en'?(e??b):b;
+const helper={$:(q,r)=>element(q),esc,bn:String,tr,storage:{get:(key,fallback)=>saved.has(key)?saved.get(key):fallback,set:(key,value)=>saved.set(key,value)},places:data.places,placeText:(p,field)=>tr(p[field],context.window.DESH_EN.places[p.id]?.[field]||p[field]),districtName:d=>tr(d.name,d.en),districtById:new Map(data.districts.map(d=>[d.id,d])),toast(){},icon:()=>'<svg></svg>'};
+const api=context.window.initDeshWorldPassport(helper);
+assert.equal(api.getSnapshot().worldCount,2);assert.equal(api.getSnapshot().passportCount,1);
+events.click({target:{closest:selector=>selector==='[data-world-country]'?{dataset:{worldCountry:'FRA'}}:null}});assert.equal(api.getSnapshot().worldCount,3);assert.ok(saved.get('worldVisited').includes('FRA'));assert.ok(emitted.includes('deshpath:worldchange'));
+events.change({target:{closest:selector=>selector==='[data-passport-place]'?{dataset:{passportPlace:data.places[1].id},checked:true}:null}});assert.equal(api.getSnapshot().passportCount,2);assert.ok(emitted.includes('deshpath:passportchange'));
+events.click({target:{closest:selector=>selector==='[data-world-country]'?{dataset:{worldCountry:'FRA'}}:null}});assert.equal(api.getSnapshot().worldCount,2);
+events.click({target:{closest:selector=>selector==='[data-world-country]'?{dataset:{worldCountry:'INVALID'}}:null}});assert.equal(api.getSnapshot().worldCount,2);
+element('#wpSearch').events.input({target:{value:'বাংলাদেশ'}});assert.match(element('#wpCountryList').innerHTML,/data-world-check="BGD"/);assert.ok(!element('#wpCountryList').innerHTML.includes('data-world-check="JPN"'));
+element('#wpOwner').events.input({target:{value:'<img src=x onerror=alert(1)>'}});assert.equal(element('#wpMapOwner').textContent,'<img src=x onerror=alert(1)>');
+language='bn';listeners.forEach(callback=>callback());assert.match(root.innerHTML,/আমার বিশ্ব মানচিত্র/);assert.match(root.innerHTML,/&lt;img src=x onerror=alert\(1\)&gt;/);
+const css=fs.readFileSync(path.join(repo,'world-passport.css'),'utf8');assert.equal((css.match(/{/g)||[]).length,(css.match(/}/g)||[]).length);
+console.log('PASS: 241 unique mapped areas, Bengali/English names, finite geometry, no Antarctica, 16 real passport places, invalid-state filtering, map toggle persistence, passport toggle/events, bilingual search, escaped owner name, language refresh, balanced CSS. Browser rendering/export QA is separate.');
+(async()=>{
+  let reads=0,validations=0;
+  const image={src:'data:image/png;base64,YQ==',width:1,height:1,bytes:1};
+  let record={id:'world-avatar',...image};
+  context.window.DESH_JOURNAL={media:async action=>{if(action==='getAll'){reads++;return [record];}},validMedia:item=>{validations++;return item?.id==='world-avatar'&&item.width===1&&item.height===1&&item.src===image.src;},compressImage:async()=>image};
+  saved.set('worldAvatar',null);context.window.initDeshWorldPassport(helper);await Promise.resolve();assert.equal(reads,0,'A null avatar reference must not load stale IndexedDB media');
+  saved.set('worldAvatar','world-avatar');record={id:'world-avatar',src:'javascript:bad'};context.window.initDeshWorldPassport(helper);await Promise.resolve();await Promise.resolve();assert.equal(validations,1);assert.equal(element('#wpAvatarPreview').innerHTML,'','Malformed stored media must not render');
+  record={id:'world-avatar',...image};context.window.initDeshWorldPassport(helper);await Promise.resolve();await Promise.resolve();assert.match(element('#wpAvatarPreview').innerHTML,/class="wp-avatar"/);
+  const input={files:[{}],disabled:false,value:'selected-file'};await element('#wpAvatarInput').events.change({target:input});assert.equal(input.disabled,false,'A successful upload must re-enable its input');assert.equal(input.value,'','A successful upload must clear its input');
+  context.window.DESH_JOURNAL.compressImage=async()=>{throw Error('invalid image');};const failed={files:[{}],disabled:false,value:'bad-file'};await element('#wpAvatarInput').events.change({target:failed});assert.equal(failed.disabled,false);assert.equal(failed.value,'');
+  console.log('PASS: inactive avatar skips media loading, stored avatar goes through shared validator, invalid media is rejected, successful and failed avatar uploads both clear/re-enable input.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

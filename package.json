@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "description": "বাংলাদেশের ইন্টারেক্টিভ ভ্রমণ মানচিত্র ও ট্রিপ প্ল্যানার",
-  "scripts": { "start": "node server.mjs" },
+  "scripts": { "start": "node server.mjs", "test": "node tests/run.cjs" },
   "engines": { "node": ">=18" }
 }

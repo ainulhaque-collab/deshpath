@@ -1,0 +1,15 @@
+Deshpath world map
+
+Source: Natural Earth 1:50m Admin 0 countries
+https://github.com/nvkelso/natural-earth-vector/blob/master/geojson/ne_50m_admin_0_countries.geojson
+Downloaded: 2026-10-18
+Original SHA-256: 3e458fc036ad0a66411f2c1e6cac49c5d7bfb81cb1123bc513b22511a2b7fdeb
+
+Licence: Public domain.
+https://www.naturalearthdata.com/about/terms-of-use/
+
+Natural Earth states: All versions of Natural Earth raster and vector map data found on its website are in the public domain. The authors permit personal, educational and commercial use, including modification.
+
+Changes: Antarctica removed; boundaries projected to Equal Earth, simplified in projected space and rounded for an offline SVG atlas. Names and continent groupings are retained from the source. 241 mapped countries, territories and areas are included; this is not a count of sovereign states. Tiny islands may be selected using the searchable list. Boundary lines are illustrative and follow the source dataset.
+
+Passport artwork: Original Deshpath interface and canvas stamp design. No official passport document, immigration record or verified visit is produced.

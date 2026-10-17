@@ -1,0 +1,12 @@
+{
+  "name": "@supabase/supabase-js",
+  "version": "2.118.0",
+  "source": "https://registry.npmjs.org/@supabase/supabase-js/-/supabase-js-2.118.0.tgz",
+  "packageIntegrity": "sha512-FxI8UXMVC2UG7IkeiI8fuQZqq2oI3JeSuN8MPIC2RLVaoEAxKS0nqE6kii9Ewpq8f9gNPM6git1Y8f0vN/QLFw==",
+  "asset": "supabase-js-2.118.0.js",
+  "assetIntegrity": "sha384-TcHRA3zBbn+Lexh5n+Oil4guNPOS3rjNDpGRAN46u/s/mB2IZ50ceC6TYDU2yvgK",
+  "license": "MIT",
+  "licenseFile": "supabase-js-LICENSE.txt",
+  "retrievedAt": "2026-10-18",
+  "notes": "Official UMD browser bundle extracted without modification. Tarball SHA-512 verified against npm registry metadata. Lazy-loaded only when cloud configuration is enabled and a cloud action is used."
+}

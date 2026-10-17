@@ -4,10 +4,20 @@ window.initDeshMap = function ({$, $$, esc, bn, icon, storage, districts, divisi
   const foodData = window.DESH_FOODS;
   const photoData = window.DESH_FOOD_IMAGES?.districts || {};
   const sourceById = new Map(foodData.sources.map(source=>[source.id,source]));
-  const themes = {emerald:'#216b58',sunset:'#b66e48',ocean:'#397d9d',midnight:'#71618e'};
+  // UI and downloads share one color system; old saved theme keys stay compatible.
+  const colorToken=(key,fallback)=>getComputedStyle(document.documentElement).getPropertyValue(key).trim()||fallback;
+  const themes = {
+    emerald:colorToken('--map-theme-blue','#2855C7'),
+    sunset:colorToken('--map-theme-coral','#C85B40'),
+    ocean:colorToken('--map-theme-ocean','#26778F'),
+    midnight:colorToken('--map-theme-midnight','#7D5AA9')
+  };
   let theme = storage.get('theme','emerald');
   if (!themes[theme]) theme='emerald';
-  let mapStyle = storage.get('mapStyle','food') === 'color' ? 'color' : 'food';
+  const savedMapStyle=storage.get('mapStyle','food');
+  let mapStyle=['color','food','personal'].includes(savedMapStyle)?savedMapStyle:'food';
+  let customMap=null;
+  let lastFoodRenderKey=null,lastVisitedEventKey=null;
   let mapName = String(storage.get('name','')).slice(0,36);
   const failedPhotos = new Set();
   const svgNS='http://www.w3.org/2000/svg';
@@ -52,17 +62,24 @@ window.initDeshMap = function ({$, $$, esc, bn, icon, storage, districts, divisi
     let pictured=0;
     svg.setAttribute('aria-label',tr('বাংলাদেশের ৬৪ জেলা। এন্টার বা স্পেস দিয়ে জেলা বাছাই করুন।','Bangladesh, 64 districts. Press Enter or Space to select a district.'));
     for(const [id,path] of paths){
-      const yes=selected.has(id),item=photo(id),hasPhoto=yes&&mapStyle==='food'&&!!item;
-      path.classList.toggle('visited',yes);path.classList.toggle('photo-filled',hasPhoto);path.setAttribute('aria-pressed',String(yes));
-      if(hasPhoto){ensurePattern(id);path.style.fill=`url(#food-${id})`;pictured++;}else path.style.removeProperty('fill');
-      const title=districtName(districtById.get(id))+(yes?' · '+tr('ঘুরেছি','Visited'):'')+(hasPhoto?' · '+photoName(item):'');
+      const yes=selected.has(id),item=photo(id),hasFoodPhoto=yes&&mapStyle==='food'&&!!item;
+      path.classList.toggle('visited',yes);path.classList.remove('photo-filled');path.style.removeProperty('fill');path.setAttribute('aria-pressed',String(yes));
+      let personalPhoto=false;
+      if(mapStyle==='personal')personalPhoto=!!customMap?.paint(id,path,yes);
+      if(hasFoodPhoto){ensurePattern(id);path.style.fill=`url(#food-${id})`;path.classList.add('photo-filled');}
+      if(hasFoodPhoto||personalPhoto)pictured++;
+      const title=districtName(districtById.get(id))+(yes?' · '+tr('ঘুরেছি','Visited'):'')+(hasFoodPhoto?' · '+photoName(item):personalPhoto?' · '+tr('নিজের ছবি','My photo'):'');
       path.setAttribute('aria-label',title);path.querySelector('title').textContent=title;
     }
     $$('.district-button').forEach(button=>{const yes=selected.has(button.dataset.district);button.classList.toggle('selected',yes);button.setAttribute('aria-pressed',String(yes));$('.district-checkbox',button).innerHTML=yes?icon('check'):'';});
     $('#visitedCount').textContent=bn(selected.size);const percent=Math.round(selected.size/64*100);$('#visitedPercent').textContent=bn(percent)+'%';$('#mapProgress').style.width=percent+'%';
     $$('[data-map-style]').forEach(b=>{const active=b.dataset.mapStyle===mapStyle;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
-    $('#mapPhotoNote').textContent=mapStyle==='color'?tr('পছন্দের রঙে দেখুন আপনার ঘুরে আসা জেলাগুলো।','Show your visited districts in your favourite colour.'):selected.size?tr(`${bn(pictured)}টি জেলার ভেতরে স্থানীয় খাবারের ছবি। ছবি না থাকলে রং দেখাবে।`,`${pictured} districts filled with local food photos. Colour is used where a verified photo is unavailable.`):tr('জেলা বাছলেই তার ভেতরে স্থানীয় খাবারের ছবি ফুটে উঠবে।','Select a district to fill its shape with a local food photo.');
-    $('.map-workspace').classList.toggle('food-map',mapStyle==='food');updateSelectAll();renderFoods();
+    $('#mapPhotoNote').textContent=mapStyle==='color'?tr('পছন্দের রঙে দেখুন আপনার ঘুরে আসা জেলাগুলো।','Show your visited districts in your favourite colour.'):mapStyle==='personal'?tr(`${bn(pictured)}টি জেলার ভেতরে আপনার আপলোড করা ছবি। ছবি না বসানো জেলায় বাছাইয়ের রং দেখাবে। ছবি শুধু এই ব্রাউজারে থাকে।`,`${pictured} districts filled with your uploaded photos. Selected districts without a photo use your chosen colour. Photos stay in this browser.`):selected.size?tr(`${bn(pictured)}টি জেলার ভেতরে স্থানীয় খাবারের ছবি। ছবি না থাকলে রং দেখাবে।`,`${pictured} districts filled with local food photos. Colour is used where a verified photo is unavailable.`):tr('জেলা বাছলেই তার ভেতরে স্থানীয় খাবারের ছবি ফুটে উঠবে।','Select a district to fill its shape with a local food photo.');
+    $('.map-workspace').classList.toggle('food-map',mapStyle==='food');updateSelectAll();customMap?.decorations();
+    const visitedKey=[...selected].sort().join(','),foodKey=window.DESH_I18N.lang+'|'+visitedKey+'|'+[...failedPhotos].sort().join(',');
+    // Cropping a personal photo should not rebuild every food card or profile.
+    if(foodKey!==lastFoodRenderKey){renderFoods();lastFoodRenderKey=foodKey;}
+    if(visitedKey!==lastVisitedEventKey){lastVisitedEventKey=visitedKey;window.dispatchEvent(new CustomEvent('deshpath:mapchange',{detail:{visited:[...selected]}}));}
   }
   function toggleDistrict(id){if(!districtById.has(id))return;selected.has(id)?selected.delete(id):selected.add(id);storage.set('visited',[...selected]);updateSelection();}
   svg.addEventListener('click',event=>{const path=event.target.closest('[data-district]');if(path)toggleDistrict(path.dataset.district);});
@@ -93,7 +110,8 @@ window.initDeshMap = function ({$, $$, esc, bn, icon, storage, districts, divisi
   $('#resetMap').addEventListener('click',()=>{selected.clear();storage.set('visited',[]);updateSelection();toast(tr('জেলার বাছাই মুছে দেওয়া হয়েছে।','Your district selection has been cleared.'));});
   function setTheme(value){theme=value;$('.map-workspace').style.setProperty('--district-color',themes[theme]);$$('[data-theme]').forEach(b=>{b.classList.toggle('active',b.dataset.theme===theme);b.setAttribute('aria-pressed',String(b.dataset.theme===theme));});}
   $$('[data-theme]').forEach(b=>b.addEventListener('click',()=>{setTheme(b.dataset.theme);storage.set('theme',theme);}));
-  $$('[data-map-style]').forEach(b=>b.addEventListener('click',()=>{mapStyle=b.dataset.mapStyle;storage.set('mapStyle',mapStyle);updateSelection();}));
+  function setStyle(value){if(!['color','food','personal'].includes(value))return;mapStyle=value;storage.set('mapStyle',mapStyle);updateSelection();}
+  $$('[data-map-style]').forEach(b=>b.addEventListener('click',()=>setStyle(b.dataset.mapStyle)));
   $('#mapName').value=mapName;$('#mapName').addEventListener('input',event=>{mapName=event.target.value.slice(0,36);storage.set('name',mapName);});
 
   function loadImage(src){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});}
@@ -104,6 +122,14 @@ window.initDeshMap = function ({$, $$, esc, bn, icon, storage, districts, divisi
     const button=$('#downloadMap');button.disabled=true;
     // Snapshot the poster so changing language/selection during image loading cannot mix states.
     const ids=[...selected],posterStyle=mapStyle,posterTheme=themes[theme],posterName=mapName,english=window.DESH_I18N.lang==='en';
+    const personalSnapshot=customMap?.getSnapshot()||{showNames:false,home:'',avatar:null};
+    const personalPhotos=new Map(ids.map(id=>[id,customMap?.exportPhoto(id)]).filter(([,record])=>record));
+    const requestedFormat=$('#mapExportFormat')?.value||'png',posterFormat=['png','jpeg','pdf'].includes(requestedFormat)?requestedFormat:'png';
+    const posterPalette={
+      paper:colorToken('--surface','#FFFFFF'),brand:colorToken('--brand','#2855C7'),
+      text:colorToken('--text','#202733'),muted:colorToken('--text-muted','#596778'),
+      border:colorToken('--border','#DCE3EC'),empty:colorToken('--map-empty','#DCE5ED')
+    };
     const local=(b,e)=>english?e:b,number=n=>english?String(n):String(n).replace(/\d/g,d=>'০১২৩৪৫৬৭৮৯'[d]);
     const name=d=>english?d.en:d.name;
     const rows=$('#includeFoods').checked?sortedDistricts.filter(d=>ids.includes(d.id)&&districtFoods(d.id).length).map(d=>({name:name(d),foods:districtFoods(d.id).map(item=>english?(window.DESH_EN.foods[item.name]?.name||item.name):item.name).join(' · ')})):[];
@@ -111,25 +137,41 @@ window.initDeshMap = function ({$, $$, esc, bn, icon, storage, districts, divisi
       await document.fonts.ready;
       const images=new Map();
       if(posterStyle==='food')await Promise.all([...new Set(ids.map(id=>photo(id)?.src).filter(Boolean))].map(async src=>{try{images.set(src,await loadImage(src));}catch{}}));
+      if(posterStyle==='personal')await Promise.all([...new Set([...personalPhotos.values()].map(record=>record.src))].map(async src=>{try{images.set(src,await loadImage(src));}catch{}}));
+      let avatarImage=null;if(personalSnapshot.avatar?.src){try{avatarImage=await loadImage(personalSnapshot.avatar.src);}catch{}}
       const creditLines=[];
       const canvas=document.createElement('canvas');canvas.width=1400;let ctx=canvas.getContext('2d');ctx.font='16px Arial,sans-serif';
-      if(images.size){const response=await fetch('assets/credits.json');if(!response.ok)throw new Error('Photo credits unavailable');const credits=await response.json();for(const src of images.keys()){const credit=credits.photos.find(p=>'assets/'+p.file===src);if(!credit)throw new Error('Missing photo attribution: '+src);creditLines.push(...wrapText(ctx,`${credit.title} — ${credit.author} · ${credit.license}`,1200),...wrapText(ctx,credit.source+' · '+credit.licenseUrl,1200),'');}}
+      if(posterStyle==='food'&&images.size){const response=await fetch('assets/credits.json');if(!response.ok)throw new Error('Photo credits unavailable');const credits=await response.json();for(const src of images.keys()){const credit=credits.photos.find(p=>'assets/'+p.file===src);if(!credit)throw new Error('Missing photo attribution: '+src);creditLines.push(...wrapText(ctx,`${credit.title} — ${credit.author} · ${credit.license}`,1200),...wrapText(ctx,credit.source+' · '+credit.licenseUrl,1200),'');}}
       const foodHeight=rows.length?150+Math.ceil(rows.length/2)*130:0,creditsHeight=creditLines.length?100+creditLines.length*23:0;
       canvas.height=1650+foodHeight+creditsHeight;ctx=canvas.getContext('2d');const w=canvas.width,h=canvas.height;
-      ctx.fillStyle='#faf8f3';ctx.fillRect(0,0,w,h);ctx.textAlign='center';ctx.fillStyle='#165b4d';ctx.font='700 74px DeshBangla,sans-serif';ctx.fillText(local('দেশপথ.','Deshpath.'),700,125);
-      let size=48;ctx.font='600 '+size+'px DeshBangla,sans-serif';const title=posterName.trim()||local('আমার বাংলাদেশ','My Bangladesh');while(ctx.measureText(title).width>1240&&size>18){size-=2;ctx.font='600 '+size+'px DeshBangla,sans-serif';}ctx.fillStyle='#263e2e';ctx.fillText(title,700,216);
-      ctx.font='400 30px DeshBangla,sans-serif';ctx.fillStyle='#687b70';ctx.fillText(local('ঘুরে দেখেছি '+number(ids.length)+'টি জেলা · '+number(Math.round(ids.length/64*100))+'% বাংলাদেশ','Visited '+ids.length+' districts · '+Math.round(ids.length/64*100)+'% of Bangladesh'),700,275);
+      ctx.fillStyle=posterPalette.paper;ctx.fillRect(0,0,w,h);ctx.textAlign='center';ctx.fillStyle=posterPalette.brand;ctx.font='700 74px DeshBangla,sans-serif';ctx.fillText(local('দেশপথ.','Deshpath.'),700,125);
+      if(avatarImage){const x=1270,y=100,r=47,ratio=Math.max(2*r/avatarImage.naturalWidth,2*r/avatarImage.naturalHeight),iw=avatarImage.naturalWidth*ratio,ih=avatarImage.naturalHeight*ratio;ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.clip();ctx.drawImage(avatarImage,x-iw/2,y-ih/2,iw,ih);ctx.restore();ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.strokeStyle=posterPalette.border;ctx.lineWidth=3;ctx.stroke();}
+      let size=48;ctx.font='600 '+size+'px DeshBangla,sans-serif';const title=posterName.trim()||local('আমার বাংলাদেশ','My Bangladesh');while(ctx.measureText(title).width>1240&&size>18){size-=2;ctx.font='600 '+size+'px DeshBangla,sans-serif';}ctx.fillStyle=posterPalette.text;ctx.fillText(title,700,216);
+      ctx.font='400 30px DeshBangla,sans-serif';ctx.fillStyle=posterPalette.muted;ctx.fillText(local('ঘুরে দেখেছি '+number(ids.length)+'টি জেলা · '+number(Math.round(ids.length/64*100))+'% বাংলাদেশ','Visited '+ids.length+' districts · '+Math.round(ids.length/64*100)+'% of Bangladesh'),700,275);
       const [vx,vy,vw,vh]=window.DESH_MAP.viewBox.split(' ').map(Number),scale=Math.min(1000/vw,1190/vh);
       ctx.save();ctx.translate(200+(1000-vw*scale)/2,320+(1190-vh*scale)/2);ctx.scale(scale,scale);ctx.translate(-vx,-vy);
-      for(const item of window.DESH_MAP.paths){const path=new Path2D(item.d),yes=ids.includes(item.id),record=photo(item.id),image=posterStyle==='food'&&yes&&record?images.get(record.src):null;ctx.fillStyle=yes?posterTheme:'#dce4d3';ctx.fill(path);if(image){const b=bounds.get(item.id);ctx.save();ctx.clip(path);const ratio=Math.max(b.width/image.naturalWidth,b.height/image.naturalHeight),iw=image.naturalWidth*ratio,ih=image.naturalHeight*ratio;ctx.drawImage(image,b.x+(b.width-iw)/2,b.y+(b.height-ih)/2,iw,ih);ctx.restore();}ctx.strokeStyle='#faf8f3';ctx.lineWidth=1.6;ctx.lineJoin='round';ctx.stroke(path);}
+      for(const item of window.DESH_MAP.paths){const path=new Path2D(item.d),yes=ids.includes(item.id),record=posterStyle==='personal'?personalPhotos.get(item.id):photo(item.id),image=yes&&record&&posterStyle!=='color'?images.get(record.src):null;ctx.fillStyle=yes?posterTheme:posterPalette.empty;ctx.fill(path);if(image){ctx.save();ctx.clip(path);if(posterStyle==='personal')customMap.drawPhoto(ctx,record,image);else{const b=bounds.get(item.id),ratio=Math.max(b.width/image.naturalWidth,b.height/image.naturalHeight),iw=image.naturalWidth*ratio,ih=image.naturalHeight*ratio;ctx.drawImage(image,b.x+(b.width-iw)/2,b.y+(b.height-ih)/2,iw,ih);}ctx.restore();}ctx.strokeStyle=posterPalette.paper;ctx.lineWidth=1.6;ctx.lineJoin='round';ctx.stroke(path);}
+      if(personalSnapshot.showNames){ctx.textAlign='center';ctx.textBaseline='middle';for(const d of districts){const b=bounds.get(d.id);if(!b)continue;let fontSize=8;ctx.font='600 '+fontSize+'px DeshBangla,sans-serif';while(fontSize>3.5&&ctx.measureText(name(d)).width>b.width*.94){fontSize-=.4;ctx.font='600 '+fontSize+'px DeshBangla,sans-serif';}ctx.strokeStyle=posterPalette.paper;ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.strokeText(name(d),b.x+b.width/2,b.y+b.height/2);ctx.fillStyle=posterPalette.text;ctx.fillText(name(d),b.x+b.width/2,b.y+b.height/2);}ctx.textBaseline='alphabetic';}
+      if(personalSnapshot.home&&bounds.has(personalSnapshot.home)){const b=bounds.get(personalSnapshot.home),x=b.x+b.width/2,y=b.y+b.height/2;ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fillStyle=posterPalette.brand;ctx.fill();ctx.strokeStyle=posterPalette.paper;ctx.lineWidth=1.5;ctx.stroke();ctx.textAlign='center';ctx.font='700 11px Arial,sans-serif';ctx.fillStyle=posterPalette.paper;ctx.fillText('⌂',x,y+3);}
       ctx.restore();
-      if(rows.length){ctx.fillStyle='#e8dfce';ctx.fillRect(95,1518,1210,2);ctx.textAlign='center';ctx.font='600 34px DeshBangla,sans-serif';ctx.fillStyle='#165b4d';ctx.fillText(local('পথের সাথে জেলার স্বাদ','Local flavours along the way'),700,1580);ctx.textAlign='left';rows.forEach((row,i)=>{const x=110+(i%2)*620,y=1644+Math.floor(i/2)*130;ctx.font='600 28px DeshBangla,sans-serif';ctx.fillStyle='#213f36';ctx.fillText(row.name,x,y);ctx.font='400 21px DeshBangla,sans-serif';ctx.fillStyle='#626e67';wrapText(ctx,row.foods,555).forEach((line,j)=>ctx.fillText(line,x,y+34+j*28));});}
-      if(creditLines.length){const y=1555+foodHeight;ctx.fillStyle='#e8dfce';ctx.fillRect(95,y,1210,2);ctx.textAlign='left';ctx.fillStyle='#445e50';ctx.font='600 21px DeshBangla,sans-serif';ctx.fillText(local('খাবারের ছবির কৃতজ্ঞতা (সীমানা অনুযায়ী ক্রপ করা)','Food photo credits (cropped to district boundaries)'),100,y+38);ctx.font='16px Arial,sans-serif';ctx.fillStyle='#68766b';creditLines.forEach((line,i)=>ctx.fillText(line,100,y+70+i*23));}
-      ctx.textAlign='center';ctx.fillStyle='#687b70';ctx.font='400 23px DeshBangla,sans-serif';ctx.fillText(local('প্রতিটি পথেই নতুন গল্প।','Every journey has a new story.'),700,h-65);ctx.font='16px Arial,sans-serif';ctx.fillText('Map: geoBoundaries / BBS / OCHA ROAP · CC BY 3.0 IGO · Simplified',700,h-25);
-      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('PNG export failed');downloadBlob(blob,'deshpath-my-bangladesh.png');toast(local('আপনার মানচিত্র ডাউনলোড হয়েছে।','Your map has been downloaded.'));
+      if(rows.length){ctx.fillStyle=posterPalette.border;ctx.fillRect(95,1518,1210,2);ctx.textAlign='center';ctx.font='600 34px DeshBangla,sans-serif';ctx.fillStyle=posterPalette.brand;ctx.fillText(local('পথের সাথে জেলার স্বাদ','Local flavours along the way'),700,1580);ctx.textAlign='left';rows.forEach((row,i)=>{const x=110+(i%2)*620,y=1644+Math.floor(i/2)*130;ctx.font='600 28px DeshBangla,sans-serif';ctx.fillStyle=posterPalette.brand;ctx.fillText(row.name,x,y);ctx.font='400 21px DeshBangla,sans-serif';ctx.fillStyle=posterPalette.muted;wrapText(ctx,row.foods,555).forEach((line,j)=>ctx.fillText(line,x,y+34+j*28));});}
+      if(creditLines.length){const y=1555+foodHeight;ctx.fillStyle=posterPalette.border;ctx.fillRect(95,y,1210,2);ctx.textAlign='left';ctx.fillStyle=posterPalette.text;ctx.font='600 21px DeshBangla,sans-serif';ctx.fillText(local('খাবারের ছবির কৃতজ্ঞতা (সীমানা অনুযায়ী ক্রপ করা)','Food photo credits (cropped to district boundaries)'),100,y+38);ctx.font='16px Arial,sans-serif';ctx.fillStyle=posterPalette.muted;creditLines.forEach((line,i)=>ctx.fillText(line,100,y+70+i*23));}
+      ctx.textAlign='center';ctx.fillStyle=posterPalette.muted;ctx.font='400 23px DeshBangla,sans-serif';ctx.fillText(local('প্রতিটি পথেই নতুন গল্প।','Every journey has a new story.'),700,h-65);ctx.font='16px Arial,sans-serif';ctx.fillText('Map: geoBoundaries / BBS / OCHA ROAP · CC BY 3.0 IGO · Simplified',700,h-25);
+      if(posterFormat==='pdf'){
+        $('#mapPrintPoster')?.remove();
+        const printImage=document.createElement('img');printImage.id='mapPrintPoster';printImage.alt=title;printImage.src=canvas.toDataURL('image/png');document.body.append(printImage);
+        const cleanup=()=>{document.body.classList.remove('map-printing');printImage.remove();window.removeEventListener('afterprint',cleanup);};
+        window.addEventListener('afterprint',cleanup,{once:true});
+        try{await printImage.decode();document.body.classList.add('map-printing');window.print();}catch(error){cleanup();throw error;}
+        toast(local('প্রিন্ট উইন্ডোতে PDF হিসেবে সেভ করতে পারেন।','You can save as PDF in the print window.'));
+      }else{
+        const mime=posterFormat==='jpeg'?'image/jpeg':'image/png',extension=posterFormat==='jpeg'?'jpg':'png';
+        const blob=await new Promise(resolve=>canvas.toBlob(resolve,mime,.94));if(!blob||blob.type!==mime)throw new Error('Image export failed');downloadBlob(blob,'deshpath-my-bangladesh.'+extension);toast(local('আপনার মানচিত্র ডাউনলোড হয়েছে।','Your map has been downloaded.'));
+      }
     }catch(error){console.error('Map export:',error);toast(tr('মানচিত্র তৈরি করা যায়নি। আবার চেষ্টা করুন।','The map could not be created. Please try again.'));}finally{button.disabled=false;}
   });
-  function refreshLanguage(){renderDivisions();renderDistricts();updateSelection();tooltip.hidden=true;}
+  function refreshLanguage(){customMap?.refreshLanguage();renderDivisions();renderDistricts();updateSelection();tooltip.hidden=true;}
+  customMap=window.initDeshPhotoMap({$, $$,esc,bn,icon,storage,districts,divisions,districtById,sortedDistricts,districtFoods,districtName,divisionName,foodText,tr,toast,openDialog,svg,bounds,selected,update:updateSelection,setStyle});
   setTheme(theme);refreshLanguage();
   return {refreshLanguage,foodSourceLinks};
 };
