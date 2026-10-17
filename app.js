@@ -3,8 +3,8 @@
   const $ = (q, root = document) => root.querySelector(q);
   const $$ = (q, root = document) => [...root.querySelectorAll(q)];
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const bn = value => String(value).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
-  const money = value => '৳' + bn(Math.round(value).toLocaleString('en-IN'));
+  const bn = value => window.DESH_I18N.lang === 'en' ? String(value) : String(value).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+  const money = value => (window.DESH_I18N.lang === 'en' ? 'BDT ' : '৳') + bn(Math.round(value).toLocaleString('en-IN'));
   const clamp = (v, min, max, fallback) => Number.isFinite(Number(v)) ? Math.min(max, Math.max(min, Math.round(Number(v)))) : fallback;
   const icons = {
     'arrow-up-right':'<path d="M7 17 17 7M7 7h10v10"/>',
@@ -34,221 +34,78 @@
     utensils:'<path d="M5 3v6a3 3 0 0 0 6 0V3M8 3v18M17 3v7h4V3c-3 0-4 3-4 7m4 0v11"/>'
   };
   const icon = name => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${icons[name] || icons.compass}</svg>`;
-  function hydrate(root = document) { $$('[data-icon]', root).forEach(el => { el.innerHTML = icon(el.dataset.icon); }); }
+  const I18N=window.DESH_I18N;
+  const tr=(b,e)=>I18N.tr(b,e);
+  const districtName=d=>tr(d.name,d.en);
+  const divisionName=d=>tr(d.name+' বিভাগ',d.id+' Division');
+  const placeText=(p,field)=>tr(p[field],window.DESH_EN.places[p.id]?.[field]||p[field]);
+  const foodText=(item,field)=>tr(item[field]||'',window.DESH_EN.static[item[field]]||window.DESH_EN.foods[item.name]?.[field]||item[field]||'');
+  function hydrate(root=document){$$('[data-icon]',root).forEach(el=>el.innerHTML=icon(el.dataset.icon));}
   let toastTimer;
-  function toast(message) {
-    $('#toast').textContent = message;
-    $('#toast').classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => $('#toast').classList.remove('show'), 3300);
-  }
-  const storage = {
-    get(key, fallback) { try { const v = localStorage.getItem('deshpath.' + key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } },
-    set(key, value) { try { localStorage.setItem('deshpath.' + key, JSON.stringify(value)); } catch { toast('এই ব্রাউজারে তথ্য সেভ করা যাচ্ছে না।'); } }
+  function toast(message){$('#toast').textContent=message;$('#toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),3300);}
+  const storage={
+    get(key,fallback){try{const value=localStorage.getItem('deshpath.'+key);return value?JSON.parse(value):fallback;}catch{return fallback;}},
+    set(key,value){try{localStorage.setItem('deshpath.'+key,JSON.stringify(value));}catch{toast(tr('এই ব্রাউজারে তথ্য সেভ করা যাচ্ছে না।','Your information could not be saved in this browser.'));}}
   };
-  const { districts, places, divisions } = window.DESH_DATA;
-  const districtById = new Map(districts.map(d => [d.id, d]));
-  const placeById = new Map(places.map(p => [p.id, p]));
-  const sortedDistricts = [...districts].sort((a,b) => a.name.localeCompare(b.name, 'bn'));
-  const foodData = window.DESH_FOODS || { sources: [], districts: {} };
-  const foodSourceById = new Map(foodData.sources.map(source => [source.id, source]));
-  const foodKindLabels = {dish:'স্থানীয় পদ',sweet:'মিষ্টি',produce:'ফল ও ফসল',drink:'পানীয়',dairy:'দুগ্ধপণ্য',pantry:'রান্নার উপকরণ',fish:'মাছ ও শুঁটকি'};
-  const districtFoods = id => foodData.districts[id]?.items || [];
-  const arrayOrEmpty = value => Array.isArray(value) ? value : [];
-  const selected = new Set(arrayOrEmpty(storage.get('visited', [])).filter(id => districtById.has(id)));
-  const favorites = new Set(arrayOrEmpty(storage.get('favorites', [])).filter(id => placeById.has(id)));
-  const themes = { emerald:'#216b58', sunset:'#b66e48', ocean:'#397d9d', midnight:'#71618e' };
-  let theme = storage.get('theme', 'emerald');
-  if (!themes[theme]) theme = 'emerald';
-  let mapName = String(storage.get('name', '')).slice(0,36);
-  const savedTrip = storage.get('trip', null);
-  let trip = savedTrip && typeof savedTrip === 'object' ? savedTrip : {};
-  let tripIds = [...new Set(arrayOrEmpty(trip.destinations).filter(id => districtById.has(id)))].slice(0,7);
-  let category = 'all';
-  let visibleCount = 6;
-  const dialog = $('#contentDialog');
-  const dialogBody = $('#dialogBody');
-  function openDialog(content) { dialogBody.innerHTML = content; hydrate(dialogBody); if (!dialog.open) dialog.showModal(); }
-  $('#closeDialog').addEventListener('click', () => dialog.close());
-  dialog.addEventListener('click', event => { if (event.target === dialog) { const b=dialog.getBoundingClientRect(); if(event.clientX<b.left||event.clientX>b.right||event.clientY<b.top||event.clientY>b.bottom)dialog.close(); } });
+  const {districts,places,divisions}=window.DESH_DATA;
+  const districtById=new Map(districts.map(d=>[d.id,d]));
+  const placeById=new Map(places.map(p=>[p.id,p]));
+  const sortedDistricts=[...districts];
+  function sortDistricts(){sortedDistricts.sort((a,b)=>districtName(a).localeCompare(districtName(b),I18N.lang));}
+  function localizeCounters(){
+    $$('.stats-strip>div>strong').slice(0,2).forEach((el,i)=>el.innerHTML=bn(i?8:64)+`<span>${tr('টি','')}</span>`);
+    $$('.location-sub-label').forEach(el=>el.textContent=['origin','destination'].includes(el.htmlFor)?tr('জেলা','District'):tr('বিভাগ','Division'));
+    $('.budget-input>span').textContent=tr('৳','BDT');
+  }
+  sortDistricts();
+  const districtFoods=id=>window.DESH_FOODS.districts[id]?.items||[];
+  const storedFavorites=storage.get('favorites',[]);
+  const favorites=new Set((Array.isArray(storedFavorites)?storedFavorites:[]).filter(id=>placeById.has(id)));
+  const dialog=$('#contentDialog'),dialogBody=$('#dialogBody');
+  let activeDialog=null;
+  function renderDialog(){if(!activeDialog)return;dialogBody.innerHTML=activeDialog();hydrate(dialogBody);}
+  function openDialog(renderer){activeDialog=typeof renderer==='function'?renderer:()=>renderer;renderDialog();if(!dialog.open)dialog.showModal();}
+  $('#closeDialog').addEventListener('click',()=>dialog.close());
+  dialog.addEventListener('close',()=>activeDialog=null);
+  dialog.addEventListener('click',event=>{if(event.target!==dialog)return;const b=dialog.getBoundingClientRect();if(event.clientX<b.left||event.clientX>b.right||event.clientY<b.top||event.clientY>b.bottom)dialog.close();});
   hydrate();
+  const helpers={$, $$, esc,bn,money,clamp,icon,storage,districts,places,divisions,districtById,sortedDistricts,districtFoods,tr,districtName,divisionName,placeText,foodText,toast,openDialog};
+  const planner=window.initDeshPlanner(helpers);
+  const mapUI=window.initDeshMap(helpers);
 
-  // District selections are local. No form submission or analytics is sent to a server.
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgNS, 'svg');
-  svg.setAttribute('viewBox', window.DESH_MAP.viewBox);
-  svg.setAttribute('class', 'bangladesh-map');
-  svg.setAttribute('role','group');
-  svg.setAttribute('aria-label','বাংলাদেশের ৬৪ জেলা। এন্টার বা স্পেস দিয়ে জেলা বাছাই করুন।');
-  const pathElements = new Map();
-  for (const districtPath of window.DESH_MAP.paths) {
-    const district = districtById.get(districtPath.id);
-    if (!district) continue;
-    const path = document.createElementNS(svgNS,'path');
-    path.setAttribute('d',districtPath.d);
-    path.setAttribute('class','district-path');
-    path.dataset.district=district.id;
-    path.setAttribute('tabindex','0');
-    path.setAttribute('role','button');
-    path.setAttribute('aria-label', district.name + ' জেলা');
-    const title=document.createElementNS(svgNS,'title');title.textContent=district.name;path.append(title);
-    svg.append(path);pathElements.set(district.id,path);
-  }
-  $('#mapMount').append(svg);
-  svg.addEventListener('click',event=>{const target=event.target.closest('[data-district]');if(target)toggleDistrict(target.dataset.district);});
-  svg.addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&event.target.dataset.district){event.preventDefault();toggleDistrict(event.target.dataset.district);}});
-  const tooltip=$('#mapTooltip');
-  function moveTooltip(event) {
-    const target=event.target.closest('[data-district]');
-    if(!target){tooltip.hidden=true;return;}
-    const d=districtById.get(target.dataset.district);
-    tooltip.textContent=d.name+(selected.has(d.id)?' · ঘুরেছি':' · বেছে নিন');
-    tooltip.hidden=false;
-    const panel=$('.map-canvas-panel').getBoundingClientRect();
-    tooltip.style.left=Math.max(8,Math.min(event.clientX-panel.left+12,panel.width-145))+'px';
-    tooltip.style.top=Math.max(42,Math.min(event.clientY-panel.top-38,panel.height-48))+'px';
-  }
-  svg.addEventListener('pointermove',moveTooltip);
-  svg.addEventListener('pointerleave',()=>{tooltip.hidden=true;});
-  function filteredDistricts() {
-    const query=$('#districtSearch').value.trim().toLocaleLowerCase();
-    const division=$('#divisionFilter').value;
-    return sortedDistricts.filter(d=>(division==='all'||d.division===division)&&(!query||(d.name+' '+d.en).toLocaleLowerCase().includes(query)));
-  }
-  function renderDistricts() {
-    const list=filteredDistricts();
-    $('#districtList').innerHTML=list.length?list.map(d=>`<button class="district-button${selected.has(d.id)?' selected':''}" data-district="${d.id}" aria-pressed="${selected.has(d.id)}"><span class="district-checkbox">${selected.has(d.id)?icon('check'):''}</span>${d.name}</button>`).join(''):'<p class="no-districts">কোনো জেলা পাওয়া যায়নি।</p>';
-    updateSelectAll();
-  }
-  function updateSelectAll(){const list=filteredDistricts();$('#selectAll').textContent=list.length&&list.every(d=>selected.has(d.id))?'বাছাই মুছুন':'সব বাছাই';$('#selectAll').disabled=!list.length;}
-  function updateSelection() {
-    for(const [id,path] of pathElements){path.classList.toggle('visited',selected.has(id));path.setAttribute('aria-pressed',String(selected.has(id)));}
-    $$('.district-button').forEach(button=>{const yes=selected.has(button.dataset.district);button.classList.toggle('selected',yes);button.setAttribute('aria-pressed',String(yes));$('.district-checkbox',button).innerHTML=yes?icon('check'):'';});
-    $('#visitedCount').textContent=bn(selected.size);
-    const percent=Math.round(selected.size/64*100);
-    $('#visitedPercent').textContent=bn(percent)+'%';
-    $('#mapProgress').style.width=percent+'%';
-    updateSelectAll();
-    renderFoods();
-  }
-  function foodSourceLinks(items) {
-    const ids = [...new Set(items.flatMap(item => item.sourceIds || []))];
-    return ids.map(id => foodSourceById.get(id)).filter(Boolean).map((source,i) => `<a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer" title="${esc(source.title)}">তথ্যসূত্র${ids.length>1?' '+bn(i+1):''} ${icon('arrow-up-right')}</a>`).join('');
-  }
-  function renderFoods() {
-    const list = sortedDistricts.filter(d => selected.has(d.id));
-    const count = list.reduce((sum,d) => sum + districtFoods(d.id).length, 0);
-    $('#foodSummary').textContent = list.length ? bn(list.length)+'টি জেলার বাছাই · '+bn(count)+'টি স্থানীয় স্বাদ' : 'একটি জেলা বেছে নিলেই তার পরিচিত খাবার এখানে যোগ হবে।';
-    $('#districtFoods').classList.toggle('is-empty', !list.length);
-    $('#districtFoods').innerHTML = list.length ? list.map(d => {
-      const items = districtFoods(d.id);
-      return `<article class="food-card${items.length?'':' food-pending'}" data-food-district="${d.id}"><div class="food-card-heading"><span class="food-district-icon">${icon('map-pin')}</span><div><h4>${esc(d.name)}</h4><span>${bn(items.length)}টি পরিচিত স্বাদ</span></div><span class="food-selected-mark" aria-label="মানচিত্রে বাছাই করা">${icon('check')}</span></div>${items.length?`<ul class="food-items">${items.map(item=>`<li><div><strong>${esc(item.name)}</strong><span class="food-kind">${esc(foodKindLabels[item.kind] || 'স্থানীয় স্বাদ')}</span></div>${item.note?`<p>${esc(item.note)}</p>`:''}</li>`).join('')}</ul><div class="food-source-links">${foodSourceLinks(items)}</div>`:'<p class="food-pending-note">এই জেলার নির্ভরযোগ্য খাবারের তথ্য এখনও যোগ করা হয়নি।</p>'}</article>`;
-    }).join('') : `<div class="food-empty-copy"><span class="food-empty-icon">${icon('utensils')}</span><div><strong>ভ্রমণের গল্পে স্বাদটুকুও থাকুক</strong><p>মানচিত্রে জেলা বাছুন, অথবা শুরু করুন এই পরিচিত স্বাদগুলো দিয়ে।</p></div></div><div class="food-examples">${['tangail','bogura','cumilla'].filter(id=>districtById.has(id)&&districtFoods(id).length).map(id=>`<button class="food-example" data-food-example="${id}"><span>${esc(districtById.get(id).name)}</span><strong>${esc(districtFoods(id)[0].name)}</strong>${icon('plus')}</button>`).join('')}</div>`;
-  }
-  $('#districtFoods').addEventListener('click', event => { const b=event.target.closest('[data-food-example]'); if(b)toggleDistrict(b.dataset.foodExample); });
-  $('#includeFoods').checked = storage.get('includeFoods',true) !== false;
-  $('#includeFoods').addEventListener('change',event=>storage.set('includeFoods',event.target.checked));
-  $('#foodSources').addEventListener('click',()=>openDialog(`<div class="dialog-copy"><div class="eyebrow">স্থানীয় স্বাদের তথ্য</div><h2>খাবারের তথ্য কোথা থেকে?</h2><p>সরকারি জেলা পোর্টাল, জিআই পণ্যের তথ্য এবং প্রকাশিত প্রতিবেদনের ভিত্তিতে জেলার পরিচিত খাবার ও কৃষিপণ্য রাখা হয়েছে। প্রতিটি জেলার কার্ডে সংশ্লিষ্ট উৎস পাবেন। কোনো তথ্য যাচাই করা না গেলে সেখানে খাবারের নাম যোগ করা হয়নি।</p><ul class="credits-list">${foodData.sources.map(source=>`<li><a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.title)}</a></li>`).join('')}</ul></div>`));
-  function toggleDistrict(id){if(!districtById.has(id))return;selected.has(id)?selected.delete(id):selected.add(id);storage.set('visited',[...selected]);updateSelection();}
-  $('#districtList').addEventListener('click',event=>{const b=event.target.closest('[data-district]');if(b)toggleDistrict(b.dataset.district);});
-  $('#districtSearch').addEventListener('input',renderDistricts);
-  $('#divisionFilter').innerHTML='<option value="all">সব বিভাগ</option>'+divisions.map(d=>`<option value="${d.id}">${d.name} বিভাগ</option>`).join('');
-  $('#divisionFilter').addEventListener('change',renderDistricts);
-  $('#selectAll').addEventListener('click',()=>{const list=filteredDistricts();const remove=list.every(d=>selected.has(d.id));list.forEach(d=>remove?selected.delete(d.id):selected.add(d.id));storage.set('visited',[...selected]);updateSelection();});
-  $('#resetMap').addEventListener('click',()=>{selected.clear();storage.set('visited',[]);updateSelection();toast('জেলার বাছাই মুছে দেওয়া হয়েছে।');});
-  function setTheme(value){theme=value;$('.map-workspace').style.setProperty('--district-color',themes[theme]);$$('[data-theme]').forEach(b=>{b.classList.toggle('active',b.dataset.theme===theme);b.setAttribute('aria-pressed',String(b.dataset.theme===theme));});}
-  $$('[data-theme]').forEach(b=>b.addEventListener('click',()=>{setTheme(b.dataset.theme);storage.set('theme',theme);}));
-  $('#mapName').value=mapName;
-  $('#mapName').addEventListener('input',event=>{mapName=event.target.value.slice(0,36);storage.set('name',mapName);});
-  setTheme(theme);renderDistricts();updateSelection();
-  function downloadBlob(blob,name){const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=name;document.body.append(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);}
-  $('#downloadMap').addEventListener('click',async()=>{
-    if(!selected.size){toast('আগে ঘুরে আসা অন্তত একটি জেলা বেছে নিন।');$('#districtSearch').focus();return;}
-    const button=$('#downloadMap');button.disabled=true;
-    try {
-      await document.fonts.ready;
-      const foodRows = $('#includeFoods').checked ? sortedDistricts.filter(d=>selected.has(d.id)&&districtFoods(d.id).length).map(d=>({name:d.name,foods:districtFoods(d.id).map(item=>item.name).join(' · ')})) : [];
-      const w=1400,h=1650+(foodRows.length?160+Math.ceil(foodRows.length/2)*102:0),canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');
-      ctx.fillStyle='#faf8f3';ctx.fillRect(0,0,w,h);ctx.fillStyle='#165b4d';ctx.textAlign='center';ctx.font='700 74px DeshBangla, sans-serif';ctx.fillText('দেশপথ.',w/2,125);
-      ctx.font='600 48px DeshBangla, sans-serif';ctx.fillStyle='#263e2e';let title=mapName.trim()||'আমার বাংলাদেশ';while(ctx.measureText(title).width>w-160){ctx.font=(parseInt(ctx.font.match(/\d+px/)[0])-2)+'px DeshBangla, sans-serif';}ctx.fillText(title,w/2,216);
-      ctx.font='400 30px DeshBangla, sans-serif';ctx.fillStyle='#78876d';ctx.fillText('ঘুরে দেখেছি '+bn(selected.size)+'টি জেলা · '+bn(Math.round(selected.size/64*100))+'% বাংলাদেশ',w/2,275);
-      const paths=window.DESH_MAP.paths.map(p=>`<path d="${p.d}" fill="${selected.has(p.id)?themes[theme]:'#dce4d3'}" stroke="#f6f7ef" stroke-width="1.6" stroke-linejoin="round"/>`).join('');
-      const mapSvg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${window.DESH_MAP.viewBox}" width="1000" height="1190">${paths}</svg>`;
-      const mapUrl=URL.createObjectURL(new Blob([mapSvg],{type:'image/svg+xml;charset=utf-8'}));
-      try{const mapImage=new Image();await new Promise((resolve,reject)=>{mapImage.onload=resolve;mapImage.onerror=reject;mapImage.src=mapUrl;});ctx.drawImage(mapImage,200,320,1000,1190);}finally{URL.revokeObjectURL(mapUrl);}
-      if(foodRows.length){
-        ctx.fillStyle='#e8dfce';ctx.fillRect(95,1518,1210,2);ctx.font='600 34px DeshBangla, sans-serif';ctx.fillStyle='#165b4d';ctx.fillText('পথের সাথে জেলার স্বাদ',w/2,1580);
-        ctx.textAlign='left';
-        foodRows.forEach((row,i)=>{const x=110+(i%2)*620,y=1644+Math.floor(i/2)*102;ctx.font='600 29px DeshBangla, sans-serif';ctx.fillStyle='#213f36';ctx.fillText(row.name,x,y);let size=23;ctx.font='400 '+size+'px DeshBangla, sans-serif';while(ctx.measureText(row.foods).width>560&&size>14){size--;ctx.font='400 '+size+'px DeshBangla, sans-serif';}ctx.fillStyle='#626e67';ctx.fillText(row.foods,x,y+36);});
-        ctx.textAlign='center';ctx.font='400 19px DeshBangla, sans-serif';ctx.fillStyle='#7d827a';ctx.fillText('স্থানীয় খাবার ও পণ্য · উৎস: দেশপথের খাবারের তথ্যসূত্র',w/2,h-119);
-      }
-      ctx.font='400 24px DeshBangla, sans-serif';ctx.fillStyle='#687b70';ctx.fillText('প্রতিটি পথেই নতুন গল্প।',w/2,h-72);
-      ctx.font='17px Arial, sans-serif';ctx.fillStyle='#7d877d';ctx.fillText('Map: geoBoundaries / BBS / OCHA ROAP · CC BY 3.0 IGO · Simplified',w/2,h-27);
-      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('PNG export failed');downloadBlob(blob,'deshpath-my-bangladesh.png');toast('আপনার মানচিত্র ডাউনলোড হয়েছে।');
-    }catch(error){console.error('Map export:',error);toast('মানচিত্র তৈরি করা যায়নি। আবার চেষ্টা করুন।');}finally{button.disabled=false;}
-  });
-
+  let category='all',visibleCount=6;
   const firstPlaces=['sreemangal','coxsbazar-beach','sajek','sundarbans','paharpur','ratargul'];
-  const orderedPlaces=[...places].sort((a,b)=>{const ai=firstPlaces.indexOf(a.id),bi=firstPlaces.indexOf(b.id);return (ai<0?99:ai)-(bi<0?99:bi);});
+  const orderedPlaces=[...places].sort((a,b)=>{const ai=firstPlaces.indexOf(a.id),bi=firstPlaces.indexOf(b.id);return(ai<0?99:ai)-(bi<0?99:bi);});
+  function favoriteLabel(p){return tr(p.name+(favorites.has(p.id)?' পছন্দ থেকে সরান':' পছন্দে রাখুন'),(favorites.has(p.id)?'Remove ':'Save ')+placeText(p,'name'));}
   function renderFavoriteButtons(){
     $('#savedCount').textContent=bn(favorites.size);
-    $$('[data-favorite]').forEach(b=>{const yes=favorites.has(b.dataset.favorite);b.classList.toggle('is-favorite',yes);b.setAttribute('aria-pressed',String(yes));b.setAttribute('aria-label',placeById.get(b.dataset.favorite).name+(yes?' পছন্দ থেকে সরান':' পছন্দে রাখুন'));});
+    $$('[data-favorite]').forEach(b=>{const yes=favorites.has(b.dataset.favorite);b.classList.toggle('is-favorite',yes);b.setAttribute('aria-pressed',String(yes));b.setAttribute('aria-label',favoriteLabel(placeById.get(b.dataset.favorite)));});
   }
-  function toggleFavorite(id){if(!placeById.has(id))return;favorites.has(id)?favorites.delete(id):favorites.add(id);storage.set('favorites',[...favorites]);renderFavoriteButtons();toast(favorites.has(id)?'পছন্দের তালিকায় রাখা হয়েছে।':'পছন্দের তালিকা থেকে সরানো হয়েছে।');}
-  function getFilteredPlaces(){const query=$('#placeSearch').value.trim().toLocaleLowerCase();return orderedPlaces.filter(p=>(category==='all'||p.category===category)&&(!query||(p.name+' '+p.description+' '+districtById.get(p.district).name+' '+districtById.get(p.district).en).toLocaleLowerCase().includes(query)));}
-  function placeCard(p){const d=districtById.get(p.district);const yes=favorites.has(p.id);return `<article class="place-card"><div class="place-card-image"><button class="place-image-link" data-place="${p.id}" aria-label="${p.name} সম্পর্কে জানুন"><img src="${p.image}" alt="${imageAlt(p)}" loading="lazy" width="960" height="650"></button><span class="place-category">${p.categoryLabel}</span><button class="favorite-button${yes?' is-favorite':''}" data-favorite="${p.id}" aria-pressed="${yes}" aria-label="${p.name}${yes?' পছন্দ থেকে সরান':' পছন্দে রাখুন'}">${icon('heart')}</button></div><div class="place-card-body"><div class="place-location">${icon('map-pin')} ${d.name}, বাংলাদেশ</div><h3><a href="#explore" data-place="${p.id}">${p.name}</a></h3><p>${p.description}</p><div class="place-card-bottom"><span>${icon('clock')} ${p.duration}</span><button class="place-detail-button" data-place="${p.id}">ঘুরে দেখুন ${icon('arrow-up-right')}</button></div></div></article>`;}
-  function imageAlt(p){return p.name+' · '+districtById.get(p.district).name+' — স্থানের বাস্তব আলোকচিত্র';}
-  function renderPlaces(){const list=getFilteredPlaces();$('#placesGrid').innerHTML=list.slice(0,visibleCount).map(placeCard).join('')||'<div class="empty-results">এই বাছাইয়ে কোনো জায়গা পাওয়া যায়নি।<button class="text-button" id="clearPlaceFilters">সব জায়গা দেখুন</button></div>';$('#loadMore').hidden=list.length<=visibleCount;$('#placesResult').textContent=bn(Math.min(visibleCount,list.length))+' / '+bn(list.length)+'টি গন্তব্য দেখানো হচ্ছে';}
-  $('#placeTotal').innerHTML=bn(places.length)+'<span>টি</span>';
+  function toggleFavorite(id){if(!placeById.has(id))return;favorites.has(id)?favorites.delete(id):favorites.add(id);storage.set('favorites',[...favorites]);renderFavoriteButtons();toast(favorites.has(id)?tr('পছন্দের তালিকায় রাখা হয়েছে।','Added to your saved places.'):tr('পছন্দের তালিকা থেকে সরানো হয়েছে।','Removed from your saved places.'));}
+  function getFilteredPlaces(){const query=$('#placeSearch').value.trim().toLowerCase();return orderedPlaces.filter(p=>(category==='all'||p.category===category)&&(!query||[p.name,p.description,placeText(p,'name'),placeText(p,'description'),districtById.get(p.district).name,districtById.get(p.district).en].join(' ').toLowerCase().includes(query)));}
+  function imageAlt(p){return placeText(p,'name')+' · '+districtName(districtById.get(p.district))+tr(' — স্থানের বাস্তব আলোকচিত্র',' — a real photograph of this place');}
+  function placeCard(p){const d=districtById.get(p.district),name=placeText(p,'name');return `<article class="place-card"><div class="place-card-image"><button class="place-image-link" data-place="${p.id}" aria-label="${esc(tr(name+' সম্পর্কে জানুন','Discover '+name))}"><img src="${p.image}" alt="${esc(imageAlt(p))}" loading="lazy" width="960" height="650"></button><span class="place-category">${esc(placeText(p,'categoryLabel'))}</span><button class="favorite-button${favorites.has(p.id)?' is-favorite':''}" data-favorite="${p.id}" aria-pressed="${favorites.has(p.id)}" aria-label="${esc(favoriteLabel(p))}">${icon('heart')}</button></div><div class="place-card-body"><div class="place-location">${icon('map-pin')} ${esc(districtName(d))}, ${tr('বাংলাদেশ','Bangladesh')}</div><h3><a href="#explore" data-place="${p.id}">${esc(name)}</a></h3><p>${esc(placeText(p,'description'))}</p><div class="place-card-bottom"><span>${icon('clock')} ${esc(placeText(p,'duration'))}</span><button class="place-detail-button" data-place="${p.id}">${tr('ঘুরে দেখুন','Explore')} ${icon('arrow-up-right')}</button></div></div></article>`;}
+  function renderPlaces(){const list=getFilteredPlaces();$('#placesGrid').innerHTML=list.slice(0,visibleCount).map(placeCard).join('')||`<div class="empty-results">${tr('এই বাছাইয়ে কোনো জায়গা পাওয়া যায়নি।','No places match your search.')}<button class="text-button" id="clearPlaceFilters">${tr('সব জায়গা দেখুন','Show all places')}</button></div>`;$('#loadMore').hidden=list.length<=visibleCount;$('#placesResult').textContent=tr(bn(Math.min(visibleCount,list.length))+' / '+bn(list.length)+'টি গন্তব্য দেখানো হচ্ছে','Showing '+Math.min(visibleCount,list.length)+' of '+list.length+' destinations');$('#placeTotal').innerHTML=bn(places.length)+`<span>${tr('টি','')}</span>`;}
   $$('[data-category]').forEach(b=>b.addEventListener('click',()=>{category=b.dataset.category;visibleCount=6;$$('[data-category]').forEach(x=>x.classList.toggle('active',x===b));renderPlaces();}));
   $('#placeSearch').addEventListener('input',()=>{visibleCount=6;renderPlaces();});
   $('#loadMore').addEventListener('click',()=>{visibleCount+=6;renderPlaces();});
+  function openPlace(id){const p=placeById.get(id);if(!p)return;openDialog(()=>{
+    const d=districtById.get(p.district),foods=districtFoods(d.id),mapsUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(window.DESH_EN.places[p.id].name+' '+d.en+' Bangladesh');
+    return `<img class="dialog-image" src="${p.image}" alt="${esc(imageAlt(p))}"><div class="dialog-copy"><div class="place-location">${icon('map-pin')} ${esc(districtName(d))} · ${esc(placeText(p,'categoryLabel'))}</div><h2>${esc(placeText(p,'name'))}</h2><p>${esc(placeText(p,'description'))}</p><div class="detail-facts"><div class="detail-fact">${tr('কখন যেতে পারেন','When to go')}<strong>${esc(placeText(p,'season'))}</strong></div><div class="detail-fact">${tr('সময় রাখুন','Time to allow')}<strong>${esc(placeText(p,'duration'))}</strong></div></div>${foods.length?`<div class="detail-foods"><span>${icon('utensils')} ${tr(districtName(d)+' জেলার পরিচিত স্বাদ','Local flavours of '+districtName(d))}</span><strong>${foods.map(item=>esc(foodText(item,'name'))).join(' · ')}</strong><div class="food-source-links">${mapUI.foodSourceLinks(foods)}</div></div>`:''}<p>${tr('স্থানীয় গাইড বা সংশ্লিষ্ট কর্তৃপক্ষের কাছ থেকে যাতায়াত, প্রবেশের অনুমতি, আবহাওয়া ও থাকার তথ্য যাচাই করে পরিকল্পনা করুন।','Check transport, entry permissions, weather and accommodation with a local guide or the relevant authorities before your visit.')}</p><div class="dialog-actions"><button class="button primary" data-plan-district="${d.id}">${tr('ট্রিপে জেলা যোগ করুন','Add district to trip')} ${icon('plus')}</button><a class="button secondary" href="${mapsUrl}" target="_blank" rel="noopener noreferrer">Google Maps ${icon('arrow-up-right')}</a></div><p class="source-note">${tr('এই গন্তব্যের নিজস্ব আলোকচিত্র ব্যবহার করা হয়েছে। ছবির লেখক, উৎস ও লাইসেন্স ফুটারের কৃতজ্ঞতা অংশে পাবেন।','This destination uses a real photograph of the place. Photo credits, sources and licences are listed in the footer.')}</p></div>`;
+  });}
+  function openSaved(){openDialog(()=>`<div class="dialog-copy"><div class="eyebrow">${tr('পরে ঘুরে দেখবেন','Places to explore later')}</div><h2>${tr('পছন্দের জায়গা','Saved places')} <small>(${bn(favorites.size)})</small></h2><p>${tr('আপনার বাছাই করা জায়গাগুলো এই ব্রাউজারে রাখা আছে।','Your saved places are stored in this browser.')}</p><div class="saved-list">${favorites.size?[...favorites].map(id=>{const p=placeById.get(id);return `<div class="saved-item"><img src="${p.image}" alt="${esc(imageAlt(p))}"><div><h3><a href="#explore" data-place="${p.id}">${esc(placeText(p,'name'))}</a></h3><p>${esc(districtName(districtById.get(p.district)))} · ${esc(placeText(p,'duration'))}</p></div><button class="icon-button" data-remove-saved="${p.id}" aria-label="${esc(tr(p.name+' সরান','Remove '+placeText(p,'name')))}">${icon('x')}</button></div>`;}).join(''):`<div class="saved-empty">${icon('heart')}<h3>${tr('এখনো কোনো জায়গা বাছাই করেননি','No saved places yet')}</h3><p>${tr('গন্তব্যের ছবির হার্ট চিহ্নে চাপ দিয়ে পছন্দে রাখুন।','Tap the heart on a destination photo to save it here.')}</p><button class="button primary" id="savedExplore">${tr('গন্তব্যগুলো দেখি','Explore destinations')} ${icon('arrow-right')}</button></div>`}</div></div>`);}
   document.addEventListener('click',event=>{
     const favorite=event.target.closest('[data-favorite]');if(favorite){toggleFavorite(favorite.dataset.favorite);return;}
     const place=event.target.closest('[data-place]');if(place){event.preventDefault();openPlace(place.dataset.place);return;}
     if(event.target.closest('#clearPlaceFilters')){category='all';$('#placeSearch').value='';$$('[data-category]').forEach(x=>x.classList.toggle('active',x.dataset.category==='all'));renderPlaces();}
   });
-  function openPlace(id){
-    const p=placeById.get(id);if(!p)return;const d=districtById.get(p.district);
-    const mapsUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(p.name+' '+d.en+' Bangladesh');
-    const foods=districtFoods(d.id);
-    openDialog(`<img class="dialog-image" src="${p.image}" alt="${imageAlt(p)}"><div class="dialog-copy"><div class="place-location">${icon('map-pin')} ${d.name} · ${p.categoryLabel}</div><h2>${p.name}</h2><p>${p.description}</p><div class="detail-facts"><div class="detail-fact">কখন যেতে পারেন<strong>${p.season}</strong></div><div class="detail-fact">সময় রাখুন<strong>${p.duration}</strong></div></div>${foods.length?`<div class="detail-foods"><span>${icon('utensils')} ${d.name} জেলার পরিচিত স্বাদ</span><strong>${foods.map(item=>esc(item.name)).join(' · ')}</strong><div class="food-source-links">${foodSourceLinks(foods)}</div></div>`:''}<p>স্থানীয় গাইড বা সংশ্লিষ্ট কর্তৃপক্ষের কাছ থেকে যাতায়াত, প্রবেশের অনুমতি, আবহাওয়া ও থাকার তথ্য যাচাই করে পরিকল্পনা করুন।</p><div class="dialog-actions"><button class="button primary" id="planPlace">ট্রিপে জেলা যোগ করুন ${icon('plus')}</button><a class="button secondary" href="${mapsUrl}" target="_blank" rel="noopener noreferrer">Google Maps ${icon('arrow-up-right')}</a></div><p class="source-note">এই গন্তব্যের নিজস্ব আলোকচিত্র ব্যবহার করা হয়েছে। ছবির লেখক, উৎস ও লাইসেন্স ফুটারের কৃতজ্ঞতা অংশে পাবেন।</p></div>`);
-    $('#planPlace').addEventListener('click',()=>{if(addTrip(d.id)){dialog.close();location.hash='planner';$('#planner').scrollIntoView({behavior:'smooth'});}});
-  }
-  function openSaved(){openDialog(`<div class="dialog-copy"><div class="eyebrow">পরে ঘুরে দেখবেন</div><h2>পছন্দের জায়গা <small>(${bn(favorites.size)})</small></h2><p>আপনার বাছাই করা জায়গাগুলো এই ব্রাউজারে রাখা আছে।</p><div class="saved-list">${favorites.size?[...favorites].map(id=>{const p=placeById.get(id);return `<div class="saved-item"><img src="${p.image}" alt="${imageAlt(p)}"><div><h3><a href="#explore" data-place="${p.id}">${p.name}</a></h3><p>${districtById.get(p.district).name} · ${p.duration}</p></div><button class="icon-button" data-remove-saved="${p.id}" aria-label="${p.name} সরান">${icon('x')}</button></div>`;}).join(''):`<div class="saved-empty">${icon('heart')}<h3>এখনো কোনো জায়গা বাছাই করেননি</h3><p>গন্তব্যের ছবির হার্ট চিহ্নে চাপ দিয়ে পছন্দে রাখুন।</p><button class="button primary" id="savedExplore">গন্তব্যগুলো দেখি ${icon('arrow-right')}</button></div>`}</div></div>`);const go=$('#savedExplore');if(go)go.addEventListener('click',()=>{dialog.close();location.hash='explore';});}
   $('#savedBtn').addEventListener('click',openSaved);
-  dialogBody.addEventListener('click',event=>{const b=event.target.closest('[data-remove-saved]');if(b){favorites.delete(b.dataset.removeSaved);storage.set('favorites',[...favorites]);renderFavoriteButtons();openSaved();}});
-  renderPlaces();renderFavoriteButtons();
-
-  // A suggested itinerary, using an explicit user budget rather than live fare claims.
-  const districtOptions=sortedDistricts.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
-  $('#origin').innerHTML=districtOptions;$('#origin').value=districtById.has(trip.origin)?trip.origin:'dhaka';
-  $('#destination').innerHTML='<option value="">জেলা বেছে নিন</option>'+districtOptions;
-  $('#days').value=clamp(trip.days,1,14,3);$('#travelers').value=clamp(trip.travelers,1,30,2);$('#budget').value=clamp(trip.budget,1000,10000000,15000);
-  const emptyPlanHtml = $('#planResult').innerHTML;
-  function currentTrip(){return {origin:$('#origin').value,destinations:tripIds,days:clamp($('#days').value,1,14,3),travelers:clamp($('#travelers').value,1,30,2),budget:clamp($('#budget').value,1000,10000000,15000)};}
-  function saveTrip(){storage.set('trip',currentTrip());storage.set('planGenerated',false);if($('#planResult .plan-ready')){$('#planResult').innerHTML=emptyPlanHtml;hydrate($('#planResult'));}}
-  function renderTripChips(){const origin=$('#origin').value;$('#tripChips').innerHTML=tripIds.length?tripIds.map(id=>`<span class="trip-chip">${districtById.get(id).name}<button type="button" data-remove-trip="${id}" aria-label="${districtById.get(id).name} ট্রিপ থেকে সরান">${icon('x')}</button></span>`).join(''):'<span style="color:#97a18d;font-size:10px">সর্বোচ্চ ৭টি জেলা যোগ করতে পারেন</span>';$$('#destination option').forEach(o=>{o.disabled=o.value===origin||tripIds.includes(o.value);});}
-  function addTrip(id){if(!districtById.has(id)){toast('আগে একটি জেলা বেছে নিন।');$('#destination').focus();return false;}if(id===$('#origin').value){toast('যাত্রার শুরুর জেলা ও গন্তব্য আলাদা রাখুন।');return false;}if(tripIds.includes(id)){toast('এই জেলা ট্রিপে আগে থেকেই আছে।');return true;}if(tripIds.length>=7){toast('এক ট্রিপে সর্বোচ্চ ৭টি জেলা যোগ করতে পারেন।');return false;}tripIds.push(id);saveTrip();renderTripChips();$('#destination').value='';return true;}
-  $('#addDestination').addEventListener('click',()=>addTrip($('#destination').value));
-  $('#tripChips').addEventListener('click',event=>{const b=event.target.closest('[data-remove-trip]');if(b){tripIds=tripIds.filter(id=>id!==b.dataset.removeTrip);saveTrip();renderTripChips();}});
-  $('#origin').addEventListener('change',()=>{tripIds=tripIds.filter(id=>id!==$('#origin').value);saveTrip();renderTripChips();});
-  ['days','travelers','budget'].forEach(id=>$('#'+id).addEventListener('input',saveTrip));
-  $$('[data-step]').forEach(b=>b.addEventListener('click',()=>{const [id,amount]=b.dataset.step.split(':');const input=$('#'+id);input.value=clamp(Number(input.value)+Number(amount),Number(input.min),Number(input.max),Number(input.min));saveTrip();}));
-  function distance(a,b){const toR=x=>x*Math.PI/180,dl=toR(b.lat-a.lat),dn=toR(b.lng-a.lng);const t=Math.sin(dl/2)**2+Math.cos(toR(a.lat))*Math.cos(toR(b.lat))*Math.sin(dn/2)**2;return 6371*2*Math.atan2(Math.sqrt(t),Math.sqrt(1-t));}
-  function routeOrder(ids,origin){const left=[...ids],result=[];let current=districtById.get(origin);while(left.length){left.sort((a,b)=>distance(current,districtById.get(a))-distance(current,districtById.get(b)));const id=left.shift();result.push(id);current=districtById.get(id);}return result;}
-  function generatePlan(announce=true){
-    const t=currentTrip();if(!tripIds.length){toast('ট্রিপে অন্তত একটি গন্তব্য জেলা যোগ করুন।');$('#destination').focus();return;}
-    if(t.days<tripIds.length){toast('প্রতি জেলার জন্য অন্তত এক দিন রাখুন, অথবা জেলার সংখ্যা কমান।');$('#days').focus();return;}
-    saveTrip();storage.set('planGenerated',true);
-    const route=routeOrder(tripIds,t.origin);
-    const days=Array.from({length:t.days},(_,i)=>{const idx=Math.min(route.length-1,Math.floor(i*route.length/t.days)),id=route[idx],d=districtById.get(id),local=places.filter(p=>p.district===id),prior=i&&Math.floor((i-1)*route.length/t.days)===idx;const offset=i-Math.ceil(idx*t.days/route.length),place=local[offset];return {d,foods:districtFoods(id),heading:(prior?'আরেকটু ঘুরে দেখা: ':'পথে নামি: ')+d.name,body:place?`${place.name} ঘিরে দিনটি সাজান। ${place.description}`:prior?'ধীরে-সুস্থে স্থানীয় বাজার, সংস্কৃতি ও আশপাশের পথ ঘুরে দেখুন। আগের দিনের একই জায়গা পুনরাবৃত্তি না করে স্থানীয়দের পরামর্শ নিন।':'শহর ও আশপাশের স্থানীয় আকর্ষণ, খাবার ও সংস্কৃতি আবিষ্কার করুন। স্থানীয়দের পরামর্শ নিয়ে যাতায়াত ঠিক করুন।'};});
-    $('#planResult').innerHTML=`<div class="plan-ready"><div class="plan-heading"><div><div class="eyebrow">আপনার ভ্রমণের খসড়া</div><h3>${bn(t.days)} দিনের একটু ছুটি</h3></div><button class="plan-print" id="printPlan">${icon('print')} প্রিন্ট / PDF</button></div><div class="plan-meta"><span>${icon('calendar')} ${bn(t.days)} দিন</span><span>${icon('users')} ${bn(t.travelers)} জন</span><span>${bn(route.length)}টি জেলা</span></div><div class="plan-route">${icon('map-pin')} ${[t.origin,...route].map(id=>esc(districtById.get(id).name)).join(' <span aria-hidden="true">→</span> ')}</div><div class="itinerary">${days.map((day,i)=>`<div class="itinerary-day"><div class="day-number">দিন<b>${bn(i+1)}</b></div><div class="day-content"><h4>${esc(day.heading)}</h4><p>${esc(day.body)}</p>${day.foods.length?`<div class="itinerary-food">${icon('utensils')}<span>জেলার স্বাদ: ${day.foods.map(item=>esc(item.name)).join(' · ')}</span></div>`:''}</div></div>`).join('')}</div><div class="plan-budget"><div class="plan-budget-heading"><span>আপনার দেওয়া মোট বাজেট</span><strong>${money(t.budget)}</strong></div><div class="budget-parts">${[['যাতায়াত',.35],['থাকা',.30],['খাবার',.25],['অন্যান্য',.10]].map(([label,share])=>`<div class="budget-part">${label} · ${bn(share*100)}%<strong>${money(t.budget*share)}</strong></div>`).join('')}</div></div><p class="plan-limit">বাজেটের ভাগ একটি প্রস্তাব, প্রকৃত ভাড়া বা বুকিং মূল্য নয়। রুটটি জেলার আনুমানিক অবস্থান অনুযায়ী সাজানো; সড়কপথ ও যাতায়াতের সময় যাচাই করুন। বিশেষত পাহাড়, বন ও দ্বীপে প্রবেশের বর্তমান নিয়ম জেনে নিন।</p></div>`;
-    $('#printPlan').addEventListener('click',()=>window.print());
-    if(announce){toast('আপনার ট্রিপের খসড়া তৈরি। শুভ ভ্রমণ!');if(innerWidth<681)$('#planResult').scrollIntoView({behavior:'smooth',block:'start'});}
-  }
-  $('#plannerForm').addEventListener('submit',event=>{event.preventDefault();generatePlan();});
-  renderTripChips();if(storage.get('planGenerated',false)&&tripIds.length)generatePlan(false);
+  dialogBody.addEventListener('click',event=>{
+    const remove=event.target.closest('[data-remove-saved]');if(remove){favorites.delete(remove.dataset.removeSaved);storage.set('favorites',[...favorites]);renderFavoriteButtons();renderDialog();return;}
+    const plan=event.target.closest('[data-plan-district]');if(plan){if(planner.addTrip(plan.dataset.planDistrict)){dialog.close();location.hash='planner';$('#planner').scrollIntoView({behavior:'smooth'});}return;}
+    if(event.target.closest('#savedExplore')){dialog.close();location.hash='explore';}
+  });
+  renderPlaces();renderFavoriteButtons();localizeCounters();
 
   const questions=[
     {q:'বাংলাদেশের কোন জেলায় পাহাড়পুর বৌদ্ধবিহার?',options:['বগুড়া','নওগাঁ','দিনাজপুর','রাজশাহী'],answer:1,fact:'পাহাড়পুরের সোমপুর মহাবিহার নওগাঁ জেলার বদলগাছী উপজেলায় অবস্থিত।'},
@@ -257,26 +114,31 @@
     {q:'চায়ের রাজধানী নামে পরিচিত শ্রীমঙ্গল কোন জেলায়?',options:['সিলেট','হবিগঞ্জ','মৌলভীবাজার','সুনামগঞ্জ'],answer:2,fact:'শ্রীমঙ্গল মৌলভীবাজার জেলার একটি উপজেলা।'},
     {q:'ষাট গম্বুজ মসজিদ কোথায় অবস্থিত?',options:['বাগেরহাট','খুলনা','সাতক্ষীরা','যশোর'],answer:0,fact:'ঐতিহাসিক ষাট গম্বুজ মসজিদ বাগেরহাটে অবস্থিত।'}
   ];
-  let quiz={index:0,score:0,answered:false};
-  function renderQuiz(){
-    if(quiz.index>=questions.length){openDialog(`<div class="dialog-copy quiz-result"><div class="eyebrow" style="justify-content:center">পথের গল্পে আপনার ফল</div><div class="quiz-score">${bn(quiz.score)}<small style="font-size:30px"> / ৫</small></div><h3>${quiz.score>=4?'দেশটাকে বেশ ভালোই চেনেন!':'আরও পথ, আরও নতুন গল্প!'}</h3><p>ভ্রমণ মানেই নতুন কিছু শেখা। এবার নতুন গন্তব্য বেছে নেওয়া যাক।</p><button class="button primary" id="restartQuiz">আবার খেলি ${icon('rotate')}</button></div>`);$('#restartQuiz').addEventListener('click',startQuiz);storage.set('quizBest',Math.max(quiz.score,clamp(storage.get('quizBest',0),0,5,0)));return;}
-    const q=questions[quiz.index];openDialog(`<div class="dialog-copy"><div class="eyebrow">দেশটাকে কতটা চেনেন? · ${bn(quiz.index+1)} / ৫</div><div class="quiz-progress">${questions.map((_,i)=>`<span class="${i<=quiz.index?'done':''}"></span>`).join('')}</div><h2>${q.q}</h2><div class="quiz-options">${q.options.map((answer,i)=>`<button class="quiz-option" data-answer="${i}">${bn(i+1)}. ${answer}</button>`).join('')}</div><p class="quiz-feedback" id="quizFeedback" aria-live="polite"></p><button class="button primary" id="quizNext" hidden>${quiz.index===questions.length-1?'ফলাফল দেখি':'পরের প্রশ্ন'} ${icon('arrow-right')}</button></div>`);
-    $$('[data-answer]',dialogBody).forEach(b=>b.addEventListener('click',()=>{if(quiz.answered)return;quiz.answered=true;const chosen=Number(b.dataset.answer);if(chosen===q.answer)quiz.score++;$$('[data-answer]',dialogBody).forEach(option=>{option.disabled=true;option.classList.toggle('correct',Number(option.dataset.answer)===q.answer);if(option===b&&chosen!==q.answer)option.classList.add('wrong');});$('#quizFeedback').textContent=(chosen===q.answer?'সঠিক! ':'শিখে নিলাম! ')+q.fact;$('#quizNext').hidden=false;}));
-    $('#quizNext').addEventListener('click',()=>{quiz.index++;quiz.answered=false;renderQuiz();});
+  let quiz={index:0,score:0,answer:null};
+  function quizMarkup(){
+    if(quiz.index>=questions.length)return `<div class="dialog-copy quiz-result"><div class="eyebrow" style="justify-content:center">${tr('পথের গল্পে আপনার ফল','Your Bangladesh quiz result')}</div><div class="quiz-score">${bn(quiz.score)}<small style="font-size:30px"> / ${bn(5)}</small></div><h3>${quiz.score>=4?tr('দেশটাকে বেশ ভালোই চেনেন!','You know Bangladesh well!'):tr('আরও পথ, আরও নতুন গল্প!','More journeys, more discoveries!')}</h3><p>${tr('ভ্রমণ মানেই নতুন কিছু শেখা। এবার নতুন গন্তব্য বেছে নেওয়া যাক।','Every journey teaches us something new. Choose your next destination.')}</p><button class="button primary" id="restartQuiz">${tr('আবার খেলি','Play again')} ${icon('rotate')}</button></div>`;
+    const q=questions[quiz.index],answered=quiz.answer!==null;
+    return `<div class="dialog-copy"><div class="eyebrow">${tr('দেশটাকে কতটা চেনেন?','How well do you know Bangladesh?')} · ${bn(quiz.index+1)} / ${bn(5)}</div><div class="quiz-progress">${questions.map((_,i)=>`<span class="${i<=quiz.index?'done':''}"></span>`).join('')}</div><h2>${tr(q.q)}</h2><div class="quiz-options">${q.options.map((answer,i)=>`<button class="quiz-option${answered&&i===q.answer?' correct':''}${answered&&i===quiz.answer&&i!==q.answer?' wrong':''}" data-answer="${i}"${answered?' disabled':''}>${bn(i+1)}. ${tr(answer)}</button>`).join('')}</div><p class="quiz-feedback" id="quizFeedback" aria-live="polite">${answered?(quiz.answer===q.answer?tr('সঠিক! ','Correct! '):tr('শিখে নিলাম! ','A new discovery! '))+tr(q.fact):''}</p><button class="button primary" id="quizNext"${answered?'':' hidden'}>${quiz.index===questions.length-1?tr('ফলাফল দেখি','See results'):tr('পরের প্রশ্ন','Next question')} ${icon('arrow-right')}</button></div>`;
   }
-  function startQuiz(){quiz={index:0,score:0,answered:false};renderQuiz();}
+  function startQuiz(){quiz={index:0,score:0,answer:null};openDialog(quizMarkup);}
   $('#quizBtn').addEventListener('click',startQuiz);
-  $('#aboutBtn').addEventListener('click',()=>openDialog('<div class="dialog-copy"><div class="eyebrow">নিজের দেশকে নতুন করে দেখা</div><h2>দেশপথ সম্পর্কে</h2><p>দেশপথ একটি স্বাধীন বাংলা ভ্রমণ ওয়েব অ্যাপ। ৬৪ জেলার ইন্টারেক্টিভ ম্যাপ, স্থানীয় খাবারের পরিচিতি, বাছাই করা গন্তব্য, ব্যক্তিগত পছন্দের তালিকা, কুইজ ও ট্রিপের খসড়া—সব এক জায়গায়।</p><p>মানচিত্র, ছবি ও গন্তব্যের তথ্য অ্যাপের সাথেই আছে। আপনার বাছাই এই ব্রাউজারে সেভ থাকে। বুকিং, পেমেন্ট বা বাস্তব সময়ের ভাড়া যাচাইয়ের সুবিধা যুক্ত করা হয়নি।</p><p>এই অ্যাপ Unseen Bangladesh বা অন্য কোনো ভ্রমণ সাইটের সাথে সংশ্লিষ্ট নয়। নিজস্ব নকশা ও কোডে তৈরি।</p></div>'));
-  $('#privacyBtn').addEventListener('click',()=>openDialog('<div class="dialog-copy"><div class="eyebrow">আপনার তথ্য, আপনার ব্রাউজার</div><h2>তথ্য ও গোপনীয়তা</h2><p>আপনার নাম, ঘোরা জেলার বাছাই, পছন্দের জায়গা, ট্রিপ ও কুইজের সেরা ফল এই ব্রাউজারের localStorage-এ রাখা হয়। কোনো অ্যাকাউন্ট বা ব্যক্তিগত তথ্য পাঠানোর সার্ভার নেই।</p><p>ব্রাউজারের সাইট ডেটা মুছলে এই তথ্য মুছে যাবে। অন্য ডিভাইস বা ব্রাউজারে এগুলো স্বয়ংক্রিয়ভাবে পাওয়া যাবে না। ম্যাপের ছবি আপনার ডিভাইসেই তৈরি হয়।</p><p>Google Maps-এর লিংক খুললে Google-এর ওয়েবসাইটে যাবেন। তখন তাদের নীতি প্রযোজ্য।</p><button class="button secondary" id="clearLocalData">এই ব্রাউজার থেকে আমার সব তথ্য মুছুন</button></div>'));
-  dialogBody.addEventListener('click',event=>{if(event.target.closest('#clearLocalData')){for(const key of ['visited','favorites','theme','name','trip','planGenerated','quizBest','includeFoods']){try{localStorage.removeItem('deshpath.'+key);}catch{}}location.reload();}});
-  $('#creditsBtn').addEventListener('click',async()=>{
-    openDialog('<div class="dialog-copy"><h2>ম্যাপ ও ছবির কৃতজ্ঞতা</h2><p>তথ্য লোড হচ্ছে…</p></div>');
-    try{const response=await fetch('assets/credits.json');if(!response.ok)throw new Error('Credits not found');const credits=await response.json();const source=window.DESH_MAP.source;
-      openDialog(`<div class="dialog-copy"><div class="eyebrow">যাঁদের কাজে পথটা সহজ হয়েছে</div><h2>ম্যাপ ও ছবির কৃতজ্ঞতা</h2><p>মানচিত্র: <a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.name)}</a> · <a href="${esc(source.licenseUrl)}" target="_blank" rel="noopener noreferrer">${esc(source.license)}</a>। প্রদর্শনের জন্য সীমানা সরলীকরণ ও SVG-তে রূপান্তর করা হয়েছে।</p><p>প্রতিটি গন্তব্যে সংশ্লিষ্ট স্থানের আলাদা বাস্তব আলোকচিত্র ব্যবহার করা হয়েছে। ফটোগুলো পাতার বিন্যাস অনুযায়ী ক্রপ করে দেখানো হয়েছে।</p><ul class="credits-list">${credits.photos.map(p=>`<li><a href="${esc(p.source)}" target="_blank" rel="noopener noreferrer">${esc(p.title)}</a><br>ছবি: <a href="${esc(p.authorUrl||p.source)}" target="_blank" rel="noopener noreferrer">${esc(p.author)}</a> · <a href="${esc(p.licenseUrl)}" target="_blank" rel="noopener noreferrer">${esc(p.license)}</a><br><small>${esc(p.changes)}</small></li>`).join('')}</ul><p>বাংলা ফন্ট: Hind Siliguri · SIL Open Font License। লাইসেন্স অ্যাপের assets ফোল্ডারে সংরক্ষিত।</p></div>`);
-    }catch{openDialog('<div class="dialog-copy"><h2>ম্যাপ ও ছবির কৃতজ্ঞতা</h2><p>মানচিত্র: geoBoundaries / BBS / OCHA ROAP, CC BY 3.0 IGO। ছবির লেখক ও লাইসেন্সের পূর্ণ তালিকা অ্যাপের assets/credits.json ফাইলে আছে।</p></div>');}
+  dialogBody.addEventListener('click',event=>{
+    const choice=event.target.closest('[data-answer]');
+    if(choice&&quiz.answer===null){quiz.answer=Number(choice.dataset.answer);if(quiz.answer===questions[quiz.index].answer)quiz.score++;renderDialog();return;}
+    if(event.target.closest('#quizNext')){quiz.index++;quiz.answer=null;if(quiz.index>=questions.length)storage.set('quizBest',Math.max(quiz.score,clamp(storage.get('quizBest',0),0,5,0)));renderDialog();}
+    if(event.target.closest('#restartQuiz'))startQuiz();
   });
-  $('#menuBtn').addEventListener('click',()=>{const open=$('#mainNav').classList.toggle('open');$('#menuBtn').setAttribute('aria-expanded',String(open));$('#menuBtn').setAttribute('aria-label',open?'মেনু বন্ধ করুন':'মেনু খুলুন');});
+  $('#aboutBtn').addEventListener('click',()=>openDialog(()=>`<div class="dialog-copy"><div class="eyebrow">${tr('নিজের দেশকে নতুন করে দেখা','See Bangladesh with fresh eyes')}</div><h2>${tr('দেশপথ সম্পর্কে','About Deshpath')}</h2><p>${tr('দেশপথ একটি স্বাধীন বাংলা ভ্রমণ ওয়েব অ্যাপ। ৬৪ জেলার ইন্টারেক্টিভ ম্যাপ, স্থানীয় খাবারের পরিচিতি, বাছাই করা গন্তব্য, ব্যক্তিগত পছন্দের তালিকা, কুইজ ও ট্রিপের খসড়া—সব এক জায়গায়।','Deshpath is an independent travel web app for Bangladesh. Explore an interactive map of all 64 districts, local food, handpicked destinations, saved places, a quiz and draft itineraries in one place.')}</p><p>${tr('মানচিত্র, ছবি ও গন্তব্যের তথ্য অ্যাপের সাথেই আছে। আপনার বাছাই এই ব্রাউজারে সেভ থাকে। বুকিং, পেমেন্ট বা বাস্তব সময়ের ভাড়া যাচাইয়ের সুবিধা যুক্ত করা হয়নি।','Map, photo and destination information is bundled with the app. Your selections are saved in this browser. Booking, payments and live fares are not available.')}</p></div>`));
+  $('#privacyBtn').addEventListener('click',()=>openDialog(()=>`<div class="dialog-copy"><div class="eyebrow">${tr('আপনার তথ্য, আপনার ব্রাউজার','Your data, your browser')}</div><h2>${tr('তথ্য ও গোপনীয়তা','Information & privacy')}</h2><p>${tr('আপনার নাম, ঘোরা জেলার বাছাই, পছন্দের জায়গা, ট্রিপ ও কুইজের সেরা ফল এই ব্রাউজারের localStorage-এ রাখা হয়। কোনো অ্যাকাউন্ট বা ব্যক্তিগত তথ্য পাঠানোর সার্ভার নেই।','Your name, visited districts, saved places, trip and best quiz result are stored locally in this browser. There are no accounts or a server receiving your personal information.')}</p><p>${tr('ভাষা ও মানচিত্রের ধরনও এই ব্রাউজারে সেভ থাকে। ব্রাউজারের সাইট ডেটা মুছলে তথ্য মুছে যাবে। অন্য ডিভাইসে এগুলো স্বয়ংক্রিয়ভাবে পাওয়া যাবে না। ম্যাপের ছবি আপনার ডিভাইসেই তৈরি হয়।','Language and map style are also saved in this browser. Clearing the site’s browser data removes your saved information. It does not sync to other devices. Map images are created on your device.')}</p><p>${tr('Google Maps-এর লিংক খুললে Google-এর ওয়েবসাইটে যাবেন। তখন তাদের নীতি প্রযোজ্য।','Google Maps links open Google’s website, where their policies apply.')}</p><button class="button secondary" id="clearLocalData">${tr('এই ব্রাউজার থেকে আমার সব তথ্য মুছুন','Delete all my data from this browser')}</button></div>`));
+  dialogBody.addEventListener('click',event=>{if(event.target.closest('#clearLocalData')){for(const key of ['visited','favorites','theme','name','trip','planGenerated','quizBest','includeFoods','mapStyle','lang']){try{localStorage.removeItem('deshpath.'+key);}catch{}}location.reload();}});
+  let credits=null;
+  function creditsMarkup(){const source=window.DESH_MAP.source;return `<div class="dialog-copy"><div class="eyebrow">${tr('যাঁদের কাজে পথটা সহজ হয়েছে','Thanks to those who made this possible')}</div><h2>${tr('ম্যাপ ও ছবির কৃতজ্ঞতা','Map & photo credits')}</h2><p>${tr('মানচিত্র:','Map:')} <a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.name)}</a> · <a href="${esc(source.licenseUrl)}" target="_blank" rel="noopener noreferrer">${esc(source.license)}</a>${tr('। প্রদর্শনের জন্য সীমানা সরলীকরণ ও SVG-তে রূপান্তর করা হয়েছে।','. Boundaries have been simplified and converted to SVG for display.')}</p><p>${tr('গন্তব্যে সংশ্লিষ্ট স্থানের বাস্তব আলোকচিত্র এবং মানচিত্রে খাবারের আলোকচিত্র ব্যবহার করা হয়েছে। সীমানা ও কার্ডের মাপ অনুযায়ী ছবি ক্রপ করা হয়েছে।','Destinations use real photographs of each place. The map uses food photographs cropped to fit district boundaries. Photos are also cropped to fit the cards.')}</p>${credits?`<ul class="credits-list">${credits.photos.map(p=>`<li><a href="${esc(p.source)}" target="_blank" rel="noopener noreferrer">${esc(p.title)}</a><br>${tr('ছবি:','Photo:')} <a href="${esc(p.authorUrl||p.source)}" target="_blank" rel="noopener noreferrer">${esc(p.author)}</a> · <a href="${esc(p.licenseUrl)}" target="_blank" rel="noopener noreferrer">${esc(p.license)}</a><br><small>${esc(p.changes)}</small></li>`).join('')}</ul>`:`<p>${tr('তথ্য লোড হচ্ছে…','Loading information…')}</p>`}<p>${tr('বাংলা ফন্ট: Hind Siliguri · SIL Open Font License। লাইসেন্স অ্যাপের assets ফোল্ডারে সংরক্ষিত।','Bengali font: Hind Siliguri · SIL Open Font License. The licence is included in the app’s assets folder.')}</p></div>`;}
+  $('#creditsBtn').addEventListener('click',async()=>{openDialog(creditsMarkup);if(credits)return;try{const r=await fetch('assets/credits.json');if(!r.ok)throw Error('Credits unavailable');credits=await r.json();if(dialog.open&&activeDialog===creditsMarkup)renderDialog();}catch{if(dialog.open&&activeDialog===creditsMarkup)openDialog(()=>`<div class="dialog-copy"><h2>${tr('ম্যাপ ও ছবির কৃতজ্ঞতা','Map & photo credits')}</h2><p>${tr('সম্পূর্ণ কৃতজ্ঞতার তালিকা assets/credits.json ফাইলে আছে।','Full photo credits are available in assets/credits.json.')}</p></div>`);}});
+
+  $('#menuBtn').addEventListener('click',()=>{const open=$('#mainNav').classList.toggle('open');$('#menuBtn').setAttribute('aria-expanded',String(open));$('#menuBtn').setAttribute('aria-label',open?tr('মেনু বন্ধ করুন','Close menu'):tr('মেনু খুলুন','Open menu'));});
   $$('.nav-link').forEach(a=>a.addEventListener('click',()=>{$('#mainNav').classList.remove('open');$('#menuBtn').setAttribute('aria-expanded','false');}));
   const sections=$$('main>section[id]');
-  if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{entries.filter(e=>e.isIntersecting).forEach(entry=>{$$('.nav-link').forEach(a=>a.classList.toggle('active',a.hash==='#'+entry.target.id));});},{rootMargin:'-15% 0px -65% 0px'});sections.forEach(s=>observer.observe(s));}
+  if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>entries.filter(e=>e.isIntersecting).forEach(entry=>$$('.nav-link').forEach(a=>a.classList.toggle('active',a.hash==='#'+entry.target.id))),{rootMargin:'-15% 0px -65% 0px'});sections.forEach(section=>observer.observe(section));}
+  $('#languageToggle').addEventListener('click',()=>I18N.setLanguage(I18N.lang==='bn'?'en':'bn'));
+  I18N.onChange(()=>{sortDistricts();planner.refreshLanguage();mapUI.refreshLanguage();renderPlaces();renderFavoriteButtons();localizeCounters();if(dialog.open)renderDialog();$('#toast').classList.remove('show');$('#menuBtn').setAttribute('aria-label',$('#mainNav').classList.contains('open')?tr('মেনু বন্ধ করুন','Close menu'):tr('মেনু খুলুন','Open menu'));});
 })();

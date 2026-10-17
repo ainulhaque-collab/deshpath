@@ -1,4 +1,90 @@
 /* A warmer, clearer palette for slow travel, real photography and local stories. */
+.language-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #fffef9; border: 1px solid #d6e0d2; border-radius: 30px; padding: 7px 12px; min-height: 35px; font-size: 12px; font-weight: 600; color: #315a47; white-space: nowrap; }
+.language-toggle svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.6; }
+.language-toggle:hover { background: #eaf1e7; }
+.map-style-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 18px; }
+.map-style-row .field-label { margin: 0; }
+.map-style-options { display: flex; padding: 3px; border-radius: 9px; border: 1px solid #dbe4d5; background: #f1f5ec; }
+.map-style-options button { background: transparent; border: 0; padding: 5px 10px; color: #6f8067; font-size: 11px; border-radius: 6px; }
+.map-style-options button.active { background: #fffefb; color: #255c43; box-shadow: 0 2px 6px #23432a15; }
+.map-photo-note { margin-top: 9px; font-size: 10px; color: #75856b; line-height: 1.8; }
+.district-path.photo-filled { stroke: #fffdf7; stroke-width: 1.8; filter: none; }
+.district-path.photo-filled:hover { stroke: #d7a25f; stroke-width: 2.5; filter: brightness(1.1); }
+.district-path.photo-filled:focus-visible { stroke: #d99541; stroke-width: 4; }
+.food-map .legend-visited { background: linear-gradient(135deg,#b58a48,#cfd6a2,#729064); }
+.food-photo { position: relative; margin: -18px -18px 16px; height: 132px; overflow: hidden; border-radius: 13px 13px 0 0; }
+.food-photo img { width: 100%; height: 100%; object-fit: cover; }
+.food-photo figcaption { position: absolute; inset: auto 0 0; background: linear-gradient(transparent,#163528b8); color: white; padding: 22px 12px 8px; font-size: 11px; }
+.food-photo-disclaimer { font-size: 10px; color: #847d6c; line-height: 1.8; margin-top: 14px; }
+.location-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.location-pair>div { min-width: 0; }
+.location-sub-label { display: block; margin: 0 0 5px; font-size: 10px; color: #7b8b70; }
+.location-pair .destination-row { gap: 6px; }
+.location-pair select { font-size: 12px; padding-left: 9px; }
+.location-pair .add-destination { width: 35px; height: 43px; }
+.location-pair .destination-row select { min-width: 0; flex: 1; }
+.planner-form select:disabled { background: #f0f3ed; color: #8a9582; cursor: not-allowed; }
+.trip-chips-hint { color: #7d8c70; font-size: 10px; }
+.stepper input::placeholder,.budget-input input::placeholder { color: #98a08e; opacity: 1; font-size: 12px; font-weight: 400; }
+html[lang=en] body { font-family: 'Segoe UI',Arial,sans-serif; }
+html[lang=en] .brand { font-size: 29px; letter-spacing: -1.2px; }
+html[lang=en] h1 { font-size: clamp(45px,4.4vw,65px); line-height: 1.14; letter-spacing: -2.3px; }
+html[lang=en] .hero-description { font-size: 15px; line-height: 1.9; }
+html[lang=en] .nav-link { font-size: 13px; padding-inline: 12px; }
+html[lang=en] .hero-buttons { gap: 18px; }
+html[lang=en] .hero-buttons .button { padding-inline: 17px; font-size: 13px; }
+html[lang=en] .section-heading h2 { font-size: 30px; letter-spacing: -.7px; }
+html[lang=en] .place-card h3 { font-size: 21px; line-height: 1.4; }
+html[lang=en] .place-card-body>p { min-height: 66px; font-size: 12px; }
+html[lang=en] .place-detail-button { font-size: 12px; }
+html[lang=en] .food-card-heading h4 { font-size: 16px; }
+html[lang=en] .food-items strong { font-size: 14px; }
+html[lang=en] .flavours-intro h3 { font-size: 22px; line-height: 1.5; }
+html[lang=en] .flavours-intro p { font-size: 11px; }
+html[lang=en] .plan-empty h3 { font-size: 25px; }
+@media(max-width:1100px) {
+  .food-photo { margin: -15px -15px 15px; }
+  html[lang=en] .header-inner { gap: 10px; }
+  html[lang=en] .nav-link { font-size: 11px; padding-inline: 9px; }
+  html[lang=en] .hero-buttons { flex-wrap: wrap; gap: 16px; }
+  html[lang=en] .section-heading h2 { font-size: 27px; }
+}
+@media(max-width:800px) {
+  .language-toggle { padding: 6px 9px; font-size: 11px; min-height: 32px; }
+  .map-style-row { flex-wrap: wrap; gap: 8px; }
+  html[lang=en] h1 { font-size: 41px; }
+  html[lang=en] .hero-description { font-size: 12px; }
+  html[lang=en] .section-heading h2 { font-size: 25px; }
+  html[lang=en] .section-heading p { font-size: 12px; }
+  .location-pair { grid-template-columns: 1fr; }
+  .map-style-options button { padding-inline: 8px; font-size: 10px; }
+}
+@media(max-width:680px) {
+  .language-toggle { padding: 5px 8px; gap: 4px; font-size: 10px; }
+  .language-toggle svg { width: 14px; }
+  .header-actions { gap: 6px; }
+  .saved-trigger { gap: 4px; padding: 2px; }
+  .food-photo { margin: -16px -16px 15px; height: 142px; }
+  .map-style-row { flex-wrap: nowrap; }
+  .map-style-options button { font-size: 11px; padding: 6px 10px; }
+  .location-pair { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .location-pair select { font-size: 11px; padding-left: 7px; }
+  .location-pair .add-destination { width: 31px; }
+  html[lang=en] .brand { font-size: 23px; gap: 6px; }
+  html[lang=en] .brand-icon { height: 29px; width: 29px; }
+  html[lang=en] .count-badge { min-width: 20px; width: 20px; height: 20px; font-size: 10px; }
+  html[lang=en] h1 { font-size: 45px; }
+  html[lang=en] .hero-description { font-size: 13px; }
+  html[lang=en] .hero-buttons .button { font-size: 12px; padding-inline: 12px; }
+  html[lang=en] .section-heading h2 { font-size: 25px; }
+  html[lang=en] .place-card h3 { font-size: 16px; }
+  html[lang=en] .place-card-body>p { font-size: 11px; min-height: 82px; line-height: 1.7; }
+  html[lang=en] .place-detail-button { font-size: 10px; }
+  html[lang=en] .place-category { font-size: 7px; }
+  html[lang=en] .flavours-intro h3 { font-size: 20px; }
+  html[lang=en] .map-controls .field-label { font-size: 11px; }
+  html[lang=en] .plan-empty h3 { font-size: 23px; }
+}
 :root {
   --green: #165b4d;
   --green-dark: #123e35;
