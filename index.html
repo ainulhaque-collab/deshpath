@@ -3,12 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#155b46">
+  <meta name="theme-color" content="#165b4d">
   <meta name="description" content="দেশপথ — নিজের বাংলাদেশ ভ্রমণ মানচিত্র, নতুন গন্তব্য ও ব্যক্তিগত ট্রিপ প্ল্যানার।">
   <title>দেশপথ — চেনা দেশের অচেনা গল্পে</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="premium.css">
   <script src="data.js" defer></script>
+  <script src="foods.js" defer></script>
   <script src="map.js" defer></script>
   <script src="app.js" defer></script>
 </head>
@@ -40,6 +42,15 @@
           <div class="map-canvas-panel"><div class="map-topline"><span><i class="status-dot"></i> আপনার ভ্রমণ মানচিত্র</span><button class="small-button" id="resetMap"><span data-icon="rotate"></span> নতুন করে শুরু</button></div><div id="mapMount" class="map-mount" aria-label="বাংলাদেশের ইন্টারেক্টিভ জেলা মানচিত্র"></div><div id="mapTooltip" class="map-tooltip" hidden></div><div class="map-bottomline"><span><i class="legend-visited"></i> ঘুরেছি</span><span><i class="legend-unvisited"></i> এখনো যাওয়া হয়নি</span><span class="map-hint">জেলায় চাপ দিয়ে বেছে নিন</span></div><div class="map-poster-brand">দেশপথ<span>প্রতিটি পথেই নতুন গল্প</span></div></div>
           <aside class="map-controls"><div class="progress-header"><div><span>আপনার পথচলা</span><strong><b id="visitedCount">০</b><small> / ৬৪ জেলা</small></strong></div><span class="progress-circle" id="visitedPercent">০%</span></div><div class="progress-track"><span id="mapProgress"></span></div><label class="field-label" for="mapName">মানচিত্রে আপনার নাম <span>(ঐচ্ছিক)</span></label><input id="mapName" maxlength="36" placeholder="যেমন: আরিফের বাংলাদেশ" autocomplete="name"><div class="control-row"><span class="field-label">পছন্দের রং</span><div class="theme-options" aria-label="মানচিত্রের রং"><button class="theme-dot emerald active" data-theme="emerald" aria-label="সবুজ" aria-pressed="true"></button><button class="theme-dot sunset" data-theme="sunset" aria-label="মাটির রং" aria-pressed="false"></button><button class="theme-dot ocean" data-theme="ocean" aria-label="নীল" aria-pressed="false"></button><button class="theme-dot midnight" data-theme="midnight" aria-label="বেগুনি" aria-pressed="false"></button></div></div><div class="district-tools"><label class="search-box"><span data-icon="search"></span><input id="districtSearch" placeholder="জেলা খুঁজুন…" aria-label="জেলা খুঁজুন"></label><select id="divisionFilter" aria-label="বিভাগ বাছাই"><option value="all">সব বিভাগ</option></select></div><div class="district-list-label"><span>ঘুরে আসা জেলা বাছাই করুন</span><button class="text-button" id="selectAll">সব বাছাই</button></div><div class="district-list" id="districtList"></div><button class="button primary download-button" id="downloadMap"><span data-icon="download"></span> আমার মানচিত্র ডাউনলোড</button><div class="local-note"><span data-icon="shield"></span> আপনার বাছাই এই ব্রাউজারেই সেভ থাকে</div></aside>
         </div>
+        <section class="district-flavours" aria-labelledby="flavoursTitle">
+          <div class="flavours-heading">
+            <div class="flavours-intro"><span class="flavours-icon" data-icon="utensils"></span><div><div class="eyebrow">ভ্রমণের সাথে একটু স্বাদের গল্প</div><h3 id="flavoursTitle">জেলা বাছুন, স্থানীয় স্বাদ চিনুন।</h3><p>মানচিত্রের বাছাই বদলালে এই তালিকাও নিজে থেকেই বদলে যাবে।</p></div></div>
+            <span class="auto-sync"><i></i> মানচিত্রের সাথে যুক্ত</span>
+          </div>
+          <div class="flavours-toolbar"><p id="foodSummary" role="status" aria-live="polite"></p><button class="text-button" id="foodSources">তথ্যের উৎস <span data-icon="arrow-up-right"></span></button></div>
+          <div id="districtFoods" class="food-grid"></div>
+          <div class="flavours-footer"><span>মিষ্টি, স্থানীয় পদ, মাছ, দুগ্ধপণ্য ও ফল/ফসল—ধরন আলাদা করে দেখানো হয়েছে।</span><label class="poster-food-option"><input type="checkbox" id="includeFoods" checked> ডাউনলোডেও খাবারের তালিকা রাখুন</label></div>
+        </section>
       </div>
     </section>
 
