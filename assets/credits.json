@@ -1,0 +1,82 @@
+{
+  "photos": [
+    {
+      "file": "hero.jpg",
+      "title": "Tea Garden near Srimangal, Sylhet, Bangladesh",
+      "author": "Xahidur Reza",
+      "authorUrl": "https://www.flickr.com/people/79741160@N05",
+      "source": "https://commons.wikimedia.org/wiki/File:Tea_Garden_near_Srimangal,_Sylhet,_Bangladesh.jpg",
+      "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4b/Tea_Garden_near_Srimangal%2C_Sylhet%2C_Bangladesh.jpg/1280px-Tea_Garden_near_Srimangal%2C_Sylhet%2C_Bangladesh.jpg",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "Wikimedia thumbnail resized to 1280 pixels wide; displayed with responsive cropping. No other changes."
+    },
+    {
+      "file": "sylhet.jpg",
+      "title": "Tea Garden near Srimangal, Sylhet, Bangladesh",
+      "author": "Xahidur Reza",
+      "authorUrl": "https://www.flickr.com/people/79741160@N05",
+      "source": "https://commons.wikimedia.org/wiki/File:Tea_Garden_near_Srimangal,_Sylhet,_Bangladesh.jpg",
+      "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4b/Tea_Garden_near_Srimangal%2C_Sylhet%2C_Bangladesh.jpg/960px-Tea_Garden_near_Srimangal%2C_Sylhet%2C_Bangladesh.jpg",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "Wikimedia thumbnail resized to 960 pixels wide; displayed with responsive cropping. No other changes."
+    },
+    {
+      "file": "cox.jpg",
+      "title": "Sea Beach View — Cox's Bazar",
+      "author": "Fahimabrar420",
+      "authorUrl": "https://commons.wikimedia.org/wiki/User:Fahimabrar420",
+      "source": "https://commons.wikimedia.org/wiki/File:Sea_Beach_View.jpg",
+      "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/81/Sea_Beach_View.jpg/960px-Sea_Beach_View.jpg",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "changes": "Wikimedia thumbnail resized to 960 pixels wide; displayed with responsive cropping. No other changes."
+    },
+    {
+      "file": "sundarbans.jpg",
+      "title": "River in Sundarban",
+      "author": "Touhid biplob",
+      "authorUrl": "https://commons.wikimedia.org/wiki/User:Touhid_biplob",
+      "source": "https://commons.wikimedia.org/wiki/File:River_in_Sundarban.jpg",
+      "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/13/River_in_Sundarban.jpg/960px-River_in_Sundarban.jpg",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "changes": "Wikimedia thumbnail resized to 960 pixels wide; displayed with responsive cropping. No other changes."
+    },
+    {
+      "file": "sajek.jpg",
+      "title": "Sajek Valley 02",
+      "author": "Masum-al-Hasan Rocky",
+      "authorUrl": "https://commons.wikimedia.org/wiki/User:RockyMasum",
+      "source": "https://commons.wikimedia.org/wiki/File:Sajek_Valley_02.jpg",
+      "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d0/Sajek_Valley_02.jpg/960px-Sajek_Valley_02.jpg",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "changes": "Wikimedia thumbnail resized to 960 pixels wide; displayed with responsive cropping. No other changes."
+    },
+    {
+      "file": "heritage.jpg",
+      "title": "Paharpur Buddhist Monastery",
+      "author": "Hafizur Rahaman",
+      "authorUrl": "https://commons.wikimedia.org/wiki/User:HafizurRahaman",
+      "source": "https://commons.wikimedia.org/wiki/File:Paharpur_Buddhist_Monastery.jpg",
+      "downloadUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/94/Paharpur_Buddhist_Monastery.jpg/960px-Paharpur_Buddhist_Monastery.jpg",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "changes": "Wikimedia thumbnail resized to 960 pixels wide; displayed with responsive cropping. No other changes."
+    }
+  ],
+  "fonts": [
+    {
+      "files": ["bangla.woff2", "bangla-semibold.woff2", "bangla-bold.woff2"],
+      "family": "Hind Siliguri",
+      "author": "Indian Type Foundry",
+      "source": "https://fonts.google.com/specimen/Hind+Siliguri",
+      "license": "SIL Open Font License 1.1",
+      "licenseUrl": "https://github.com/google/fonts/blob/main/ofl/hindsiliguri/OFL.txt",
+      "licenseFile": "FONT-LICENSE.txt",
+      "changes": "Unmodified Bengali subsets supplied by Google Fonts; weights 400, 600 and 700."
+    }
+  ]
+}
