@@ -6,5 +6,33 @@
 #mapPrintPoster{display:none}.journal-profile-link{color:var(--brand);font-size:12px;font-weight:600;white-space:nowrap}.journal-profile-link .icon{width:18px;height:18px}.journal-profile-link span{margin-left:5px}.site-header #mainNav{gap:3px}
 @media(max-width:1050px){.journal-profile-link span{display:none}.site-header #mainNav .nav-link{padding-inline:10px}.header-inner{gap:14px}.journal-columns{gap:18px}.journal-panel{padding:22px}}
 @media(max-width:680px){.journal-columns{grid-template-columns:1fr}.journal-panel{padding:20px}.journal-stats{gap:7px}.journal-stat{padding:16px 6px}.journal-stat strong{font-size:25px}.journal-shortcuts{gap:8px}.journal-shortcuts a{padding:9px 13px;font-size:12px}.journal-actions .button{flex:1 1 170px}.journal-profile-link{font-size:11px}}
+.journal-public-collection{margin-top:32px;padding:28px;border:1px solid var(--border);border-radius:20px;background:var(--surface)}
+.journal-public-heading,.journal-own-heading{display:flex;align-items:start;justify-content:space-between;gap:18px;margin-bottom:18px}
+.journal-public-heading h3,.journal-public-heading h4,.journal-own-heading h4{color:var(--text);margin:0 0 8px;font-size:21px}
+.journal-public-heading>.button,.journal-public-heading>.text-button,.journal-own-heading>.text-button{flex-shrink:0;font-size:12px}
+.journal-public-heading .journal-small{margin:0;max-width:680px}
+.journal-public-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.journal-public-story{padding:20px;border:1px solid var(--border);border-radius:13px;background:var(--surface-alt);min-width:0}
+.journal-public-story>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--text-muted)}
+.journal-public-story h4{font-size:20px;line-height:1.5;margin:14px 0 10px;overflow-wrap:anywhere}
+.journal-public-story p,.review-public-item p{font-size:13px;line-height:1.85;white-space:pre-line;overflow-wrap:anywhere;color:var(--text-muted);margin:0}
+.journal-cloud-state{display:inline-flex;align-items:center;border-radius:99px;padding:4px 9px;font-size:10px;font-weight:600;line-height:1.4;white-space:nowrap;background:var(--surface-soft);color:var(--text-muted)}
+.journal-cloud-state.pending{background:var(--accent-soft);color:var(--accent-strong)}
+.journal-cloud-state.approved{background:var(--success-bg);color:var(--success)}
+.journal-cloud-state.rejected{background:var(--danger-bg);color:var(--danger)}
+.journal-submission-list{padding:0;margin:0;list-style:none;display:grid;gap:8px;max-height:380px;overflow:auto;overscroll-behavior:contain}
+.journal-submission-list li{display:flex;justify-content:space-between;align-items:center;gap:14px;border:1px solid var(--border);background:var(--surface-alt);padding:12px;border-radius:10px}
+.journal-submission-list li>div{min-width:0}.journal-submission-list small{display:block;font-size:10px;color:var(--text-muted);margin-bottom:4px}
+.journal-submission-list strong{display:block;font-size:13px;color:var(--text);font-weight:500;overflow-wrap:anywhere}
+.journal-own-heading{margin:25px 0 12px;align-items:center}.journal-own-heading h4{font-size:17px;margin:0}
+.journal-otp-option{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:15px}
+.journal-otp-option summary{cursor:pointer;color:var(--brand);font-size:13px}.journal-otp-option form{margin-top:16px}
+.review-public-section{border-top:1px solid var(--border);margin-top:28px;padding-top:23px}
+.review-public-section .journal-public-heading{align-items:center;margin-bottom:12px}.review-public-section h4{font-size:18px;margin:0}
+.review-public-list{display:grid;gap:10px;margin-top:13px}.review-public-item{padding:16px;background:var(--surface-alt);border:1px solid var(--border);border-radius:11px}
+.review-public-item>strong{display:inline-block;margin:0 10px 10px 0;color:var(--accent-strong);font-size:14px;letter-spacing:1px}
+.review-local-item>.draft-state{display:block;color:var(--text-muted);font-size:10px;margin-bottom:7px}
+.review-local-item>[data-local-online-status]{margin:10px 0}.review-local-item .text-button:disabled{opacity:.55;cursor:default}
+@media(max-width:680px){.journal-public-collection{padding:20px}.journal-public-grid{grid-template-columns:1fr}.journal-public-heading{flex-direction:column;gap:10px}.journal-public-heading>.button{align-self:start}.journal-public-story{padding:17px}.journal-public-story h4{font-size:18px}.review-public-section .journal-public-heading{flex-direction:row;align-items:center}.journal-own-heading{gap:12px}.journal-own-heading h4{font-size:16px}.journal-submission-list li{align-items:start}.journal-submission-list .journal-cloud-state{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.journal-shortcuts a{transition:none}.journal-shortcuts a:hover{transform:none}}
 @media print{.journal-shortcuts{display:none!important}body.map-printing>*{display:none!important}body.map-printing>#mapPrintPoster{display:block!important;width:100%;height:auto}body.map-printing{background:#fff!important}body:not(.map-printing) #worldPassportRoot,body:not(.map-printing) #gamesRoot,body:not(.map-printing) #community,body:not(.map-printing) #profile{display:none!important}}

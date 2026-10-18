@@ -1,5 +1,5 @@
--- INITIAL SETUP ONLY: this script has not been applied to a live database.
--- Run on a dedicated, empty Deshpath Supabase project after owner approval.
+-- Deshpath additive initial schema, approved for the existing Dev Test project.
+-- Only deshpath_ objects are created; existing application objects stay untouched.
 -- Intentionally fails on existing object names; this is not a repeatable migration.
 begin;
 
@@ -78,14 +78,14 @@ create policy journals_owner_update on public.deshpath_journals for update to au
 using ((select auth.uid()) = user_id and not coalesce(((select auth.jwt()) ->> 'is_anonymous')::boolean, false))
 with check ((select auth.uid()) = user_id and not coalesce(((select auth.jwt()) ->> 'is_anonymous')::boolean, false));
 
-create policy contributions_public_approved on public.deshpath_contributions for select to anon, authenticated
+create policy contributions_public_approved on public.deshpath_contributions for select to anon
 using (status = 'approved');
 create policy contributions_owner_select on public.deshpath_contributions for select to authenticated
 using ((select auth.uid()) = user_id and not coalesce(((select auth.jwt()) ->> 'is_anonymous')::boolean, false));
 create policy contributions_owner_pending_insert on public.deshpath_contributions for insert to authenticated
 with check ((select auth.uid()) = user_id and status = 'pending' and published_at is null and not coalesce(((select auth.jwt()) ->> 'is_anonymous')::boolean, false));
 
-create policy reviews_public_approved on public.deshpath_reviews for select to anon, authenticated
+create policy reviews_public_approved on public.deshpath_reviews for select to anon
 using (status = 'approved');
 create policy reviews_owner_select on public.deshpath_reviews for select to authenticated
 using ((select auth.uid()) = user_id and not coalesce(((select auth.jwt()) ->> 'is_anonymous')::boolean, false));

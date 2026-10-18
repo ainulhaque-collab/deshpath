@@ -1,6 +1,6 @@
 /* Only same-origin static assets are cached. Account/API responses are excluded. */
 'use strict';
-const CACHE='deshpath-journal-20261018-1';
+const CACHE='deshpath-journal-20261018-2';
 const CORE=['./','./index.html','./styles.css','./premium.css','./edition.css','./journey-art.css','./discovery.css','./world-passport.css','./games.css','./journal-features.css','./data.js','./foods.js','./food-images.js','./content-en.js','./edition-copy.js','./language.js','./map.js','./journal-kit.js','./discovery-data.js','./world-data.js','./world-passport.js','./games.js','./photo-map.js','./map-ui.js','./planner.js','./community-profile.js','./cloud-config.js','./cloud.js','./app.js','./journey-art.js','./edition.js','./pwa.js','./assets/favicon.svg','./manifest.webmanifest'];
 const eligible=url=>url.origin===self.location.origin&&!url.pathname.startsWith('/api/')&&!url.pathname.startsWith('/backend/')&&!url.pathname.includes('/.git')&&!url.search;
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE))));

@@ -1,96 +1,64 @@
-# Deshpath optional cloud backend
+# Deshpath Supabase connection
 
-**Status: prepared, disabled, not deployed or verified end to end.** Deshpath currently runs in local browser mode. The selected Supabase organisation already uses its free project allowance, so a dedicated project could not be created. No existing project was paused, repurposed or changed, and no paid upgrade was made.
+## Deployment record — 18 October 2026
 
-The files here prepare a future integration. They do not make login, cloud synchronisation, public community submissions, photo uploads or moderation operational by themselves. `setup.sql` has **not** been executed against a live database and is an initial setup script, not an applied migration.
+The owner approved the existing **PestGurd — Development Test** project (`sfzitbasxrpmtmldujbm`, Singapore) for Deshpath. Three new `public.deshpath_` tables and one namespaced journal timestamp trigger were added. Existing application tables, data, roles, functions, email templates and Auth settings were not changed. No paid project or upgrade was created.
 
-## What is prepared
+Applied remote migration: `20261018032314_deshpath_private_journal_moderated_text_v1`.
+`setup.sql` is the exact additive initial schema. **Do not rerun it**: it deliberately fails on existing object names. Future changes require separate reviewed migrations.
 
-- Email code authentication through the official Supabase JavaScript SDK; server-verified `getUser()`, automatic foreground token refresh, explicit refresh and local-device sign-out.
-- One private journal snapshot per user, protected by owner row-level security. Save and load are separate, explicit user actions. A save replaces the user's previous cloud snapshot; it does not merge devices or resolve concurrent edits.
-- Text-only district stories and destination reviews, inserted as `pending`. Public queries return only `approved` records. A signed-in owner can also read their own pending or rejected records.
-- No frontend moderation privileges, no user-controlled metadata roles, no service key in browser code, and no public leaderboard based on self-reported game scores.
-- Browser data remains separate. Signing in does not upload it, and loading a cloud snapshot must be reviewed before the interface replaces local choices.
+The browser has only a modern publishable key. It has no service key, database password or management credential. The SDK is pinned to official Supabase JS 2.118.0, bundled locally with SRI and MIT licence.
 
-## Activation, when a dedicated project is available
+**Current state:** database connected; approved public text/reviews can be read. Email sign-in, personal cloud save/load and online submissions are held behind `authReady: false`. The owner will sign in to the Supabase dashboard later. No sign-in email has been sent during implementation, and no successful real email login is claimed. Empty feeds display an honest empty state, without demonstration posts or ratings.
 
-1. Create a dedicated Deshpath project only after the owner has selected an available free slot or explicitly approved any additional cost. Do not reuse another application's database.
-2. Review `setup.sql`, then run it once against that new project. It deliberately fails if these object names already exist. Keep the deployment record and generate real migration history during subsequent database work; do not label this unapplied script as a migration.
-3. Enable the Data API for the `public` schema. The script explicitly grants table/column privileges and enables RLS on all three tables, independent of a project's default grants.
-4. In Auth settings, use email authentication with anonymous sign-ins disabled. Configure the production Site URL and allowed development origins. The adapter uses an entered code rather than URL-based session detection.
-5. Configure the Magic Link email template to contain `{{ .Token }}` so the user actually receives a six-digit OTP. A successful `signInWithOtp()` request alone does not prove email delivery. Configure and test the project's email provider, sender, expiry, Auth rate limits and abuse protection; default email limits may not suit a public launch.
-6. Put **only** the project URL and modern **publishable** key in `cloud-config.js`, then set `enabled: true`. Never put a `service_role`, secret key, database password or management token in any frontend file.
-7. Test with two distinct email accounts and a signed-out browser before declaring cloud features live. See the verification matrix below.
+## Finish email sign-in
 
-Load `cloud-config.js` before `cloud.js`. The SDK is lazy-loaded from `assets/vendor/supabase-js-2.118.0.js` only when enabled cloud functionality is used. No npm build step or third-party CDN is required at runtime. The pinned bundle, package hash and source are recorded in the adjacent metadata JSON; its MIT licence is also included.
+1. Sign in to the existing project [URL Configuration](https://supabase.com/dashboard/project/sfzitbasxrpmtmldujbm/auth/url-configuration).
+2. Preserve its existing Site URL and redirect entries. Add the exact Deshpath return URL `https://deshpath.vercel.app/`. For local testing add only origins used: `http://127.0.0.1:4173/` and `http://localhost:4173/`. Do not add wildcard origins.
+3. Review existing email delivery/provider, expiry, rate limits and templates. Email and signup were enabled at inspection; automatic email confirmation, Google and anonymous sign-ins were disabled. These settings were not changed. The shared template should use its normal confirmation URL/redirect rather than hardcoding another app's return address. Do not globally replace its template or Site URL for Deshpath.
+4. Temporarily set `authReady: true` for a controlled local test after the local redirect is allowed. Request a sign-in email using an account you control. Open its link in the **same browser and device** that requested it. The adapter uses PKCE; a code verifier is stored locally. If the shared template includes an email code, its 6–10 digits can also be entered. A successful request is not proof of delivery.
+5. Test expiry, retry, reload, sign-out and refresh; use two real accounts to check independent saves. Confirm the shared project's email service can deliver to intended visitors. Default delivery restrictions may limit public signup; configure a suitable sender through the project owner if needed.
+6. Set `authReady: true` in the production configuration and push only after these checks pass. Test the exact production return URL. Until then the public interface deliberately shows setup pending and does not send email requests.
 
-## Browser adapter contract
+The shared project's Auth identity pool and delivery limits are shared with its other application. Deshpath uses a separate browser session storage key and namespaced app tables. Do not delete a shared Auth user as an app-only account deletion action.
 
-`window.DESH_CLOUD` exposes:
+## Data access
 
-| Method | Result |
-| --- | --- |
-| `enabled` | Boolean; false with the committed configuration |
-| `getStatus()` | `{ enabled, mode, reason }` |
-| `getUser()` | Server-verified `{ id, email }`, or `null` when no session exists |
-| `requestOtp(email)` | `{ accepted: true, email }`; call only after the visitor explicitly requests a code |
-| `verifyOtp(email, token)` | Verified user after the code is accepted |
-| `refreshSession()` | Refreshed, server-verified user |
-| `signOut()` | `{ signedOut: true }`, for this device; does not erase local journals |
-| `onAuthChange(callback)` | Returns unsubscribe; callback receives `(event, user)`, with no session tokens |
-| `saveJournal(snapshot)` | `{ snapshot, updatedAt }`; replaces that user's one snapshot |
-| `loadJournal()` | `{ snapshot, updatedAt }` or `null`; does not alter local storage |
-| `submitContribution({ districtId, title, body })` | New pending story |
-| `submitReview({ placeId, rating, body })` | New pending review; one review per user per place |
-| `listApprovedContributions()` | Up to 100 newest approved stories |
-| `listApprovedReviews(placeId?)` | Up to 100 newest approved reviews, optionally filtered |
-| `listMySubmissions()` | `{ contributions, reviews }`, up to 100 of each owned type |
+- `deshpath_journals`: one text/selection snapshot per verified user; owner-only SELECT/INSERT/UPDATE, including UPDATE USING and WITH CHECK. Save/load are explicit actions. Loading requires review before local replacement. Saving replaces the previous snapshot; no multi-device conflict merging is claimed.
+- `deshpath_contributions` and `deshpath_reviews`: authenticated authors can insert only allowed text columns, with their own ID. Status defaults to pending. They can read only their own rows, including pending/rejected status. There are no browser UPDATE/DELETE/moderation grants.
+- Public feeds use an isolated nonpersisted client, with no signed-in token. The `anon` role has only projected content-column SELECT grants and approved-only policies. It cannot read journals, pending/rejected records, author UUIDs or email addresses. The signed-in client's table reads remain owner-only even for approved records.
+- Anonymous Auth accounts are excluded from private/write policies. No editable user metadata controls authorization. The timestamp trigger is SECURITY INVOKER with a fixed empty search path.
+- Photos remain in the browser's IndexedDB and backup files. No Storage bucket or cloud photo upload was created. Manual journal saves omit portraits and photo assignments; explicit public review submission sends text/rating only.
+- Local-data removal signs out this device and erases local app data; it does not erase remote records or the shared Supabase account.
 
-Methods reject a `DeshpathCloudError` with a short `code`, including `cloud-disabled`, `sign-in-required`, `invalid-input`, `invalid-email`, `invalid-otp`, `already-submitted`, `journal-too-large`, `invalid-journal`, `sdk-unavailable` or `cloud-request-failed`. Surface errors as text and escape all community content on rendering. A disabled mode must say it is local, rather than displaying a simulated signed-in account or successful upload.
+## Moderation and removal
 
-Journal snapshots must be JSON objects under 256 KiB. Session credentials and embedded `data:` images are rejected. Files stay outside the snapshot. The SDK's own auth session is stored separately under `deshpath.cloud.auth`; it must never be added to exported journals.
+Review new submissions through the owner's trusted [table dashboard](https://supabase.com/dashboard/project/sfzitbasxrpmtmldujbm/editor). A checked contribution/review may be approved by setting `status='approved'` and `published_at=now()` together. Rejection uses `status='rejected'` and `published_at=null`. This is an administrator operation, never a browser role or user-editable flag.
 
-## Database access and moderation
+The public application has no admin screen. Before opening submissions broadly, establish an owner-operated correction/removal channel, retention procedure and abuse/rate-limit controls. Deshpath-specific deletion must be scoped to `deshpath_` rows, preserving any other application's account/data. Google OAuth, public cloud photos, automatic notifications, shared journal links and a trusted global leaderboard remain separate work.
 
-`deshpath_journals` has owner-only `SELECT`, `INSERT` and `UPDATE` policies, including both `USING` and `WITH CHECK`. The timestamp is server-controlled. Anonymous Auth users are rejected by the private/write policies.
+## Verification completed
 
-Community tables expose approved content to visitors and owned rows to their author. Authenticated inserts are restricted to the allowed content columns, the current user's ID, `pending` status and a null publication time. Browser roles have **no** update/delete grants or moderation RPC, so they cannot approve themselves, rewrite an approved review or change ownership. Authenticated readers can see user UUIDs on approved rows if they query the underlying tables; public display queries deliberately omit these identifiers and never expose an email address. Anonymous readers receive only explicitly granted content columns.
+Live PostgreSQL assertions exercised the actual `authenticated` and `anon` roles with two isolated synthetic identities inside a rollback-only transaction. They verified owner save/load/update/upsert; blocked cross-owner reads, updates, reassignment and forged author inserts; pending-only community inserts; inability to self-approve/update/delete; exclusion of anonymous Auth accounts; approved-only public content and hidden UUID/journals. All assertions passed. No credentials/email identities were created; post-rollback assertions confirmed no test user or fixture remained.
 
-Moderation must happen through a trusted operational process outside the public application, using an authorised administrator's dashboard or a later secured server service. An administrator checks the content, then sets `status='approved'` and `published_at=now()` together; a rejected row has `status='rejected'` and `published_at=null`. Never add a browser-supplied `isAdmin` flag or use editable `user_metadata` to grant this permission.
+Real HTTP Data API checks with the publishable key returned HTTP 200 and empty arrays for approved stories/reviews, and HTTP 401 / PostgreSQL 42501 for private journals and author UUID reads. No posts were fabricated for production.
 
-Before a public cloud launch, add operational rate limiting/abuse controls and a documented removal/correction process. This initial adapter deliberately offers no public admin screen or client edit/delete endpoint. Server-side retention and account-deletion procedures also need to be established by the project owner.
+Security advisors reported no Deshpath-specific findings. Performance advisors only noted newly created, not-yet-used publication indexes, which are retained for feed queries. Existing unrelated project advisories were not changed; this was not an audit of the other application's private code. A read of that code was declined by automatic approval review as outside Deshpath scope and was not retried.
 
-## Photos are not uploaded
+Unit tests cover PKCE callback exchange/cleanup, route restoration, auth setup gating, isolated public client, payload validation, SRI and grant/policy structure. These are not a substitute for the pending real email/session tests above.
 
-Local photo drafts can remain in the browser's IndexedDB gallery. The current adapter handles **text only**. Cloud photo uploads need a separate reviewed Storage setup: a private bucket for originals, user-owned paths and RLS, limits on MIME type/file size, sanitised metadata, publication consent/licensing checks, moderation, and approved public derivatives. Creating a public bucket or exposing every pending original would bypass the moderation model, so this script creates no bucket or upload policy.
+## Adapter contract
 
-## Required live verification
+`window.DESH_CLOUD.getStatus()` reports `enabled`, `authReady`, `mode` and `reason`. With `authReady:false`, `requestMagicLink()` and `requestOtp()` reject `auth-not-ready` before SDK/email activity. `completeAuthCallback()` handles an incoming PKCE code once, removes auth parameters immediately, exchanges the code and verifies the user on the Auth server. It preserves a safe local section route. It does not accept an implicit token URL.
 
-These checks remain **pending** until a real project exists:
+Other methods: `getUser`, `refreshSession`, `signOut` (this device), `onAuthChange`, `saveJournal`, `loadJournal`, `submitContribution`, `submitReview`, `listApprovedContributions`, `listApprovedReviews` and `listMySubmissions`. Owner writes require a real verified session and explicit user action. Review submissions are one per user/place. Submission content is pending until the administrator approves it.
 
-| Actor/action | Required result |
-| --- | --- |
-| Signed-out visitor reads approved stories/reviews | Allowed; pending and rejected content absent |
-| Signed-out visitor reads journals or inserts content | Denied |
-| User A reads/updates User B's journal | Denied |
-| User A inserts a journal with User B's ID | Denied |
-| User A changes their journal owner ID | Denied |
-| User A saves then loads their own snapshot | Matches, with a server timestamp |
-| User A submits text with `status='approved'` or a publication time | Denied by column privileges/RLS |
-| User A tries to update or approve a pending row | Denied |
-| User B reads User A's pending/rejected row | Denied |
-| Anonymous Auth user attempts a private write | Denied |
-| Email OTP, expiry, refresh, reload and device sign-out | Genuine session behaviour; no email sent by automated preparation |
-| Security/performance advisors | Run and resolve findings before activation |
+## Primary references checked
 
-Local mock tests verify adapter calls, disabled-mode network inactivity, payload validation and session verification. Static checks review grants and RLS. They cannot prove live database enforcement, email delivery or deployment configuration. No SQL test query could be run because the project was not created.
-
-## Primary references checked 18 October 2026
-
-- [Supabase changelog](https://supabase.com/changelog.md), including the [TLS cipher deprecation](https://supabase.com/changelog/cbc-tls-ciphers-deprecated). Use a current browser with modern TLS support. The September PostgreSQL extension/index changes do not affect this new schema, which introduces none of those indexes or legacy encrypted data.
-- [Email OTP authentication](https://supabase.com/docs/guides/auth/auth-email-passwordless)
-- [Server-verified getUser](https://supabase.com/docs/reference/javascript/auth-getuser)
-- [Session refresh](https://supabase.com/docs/reference/javascript/auth-refreshsession) and [automatic refresh](https://supabase.com/docs/reference/javascript/auth-startautorefresh)
+- [Supabase changelog](https://supabase.com/changelog.md) and [upcoming TLS cipher removal](https://supabase.com/changelog/cbc-tls-ciphers-deprecated)
+- [Passwordless email and PKCE](https://supabase.com/docs/guides/auth/auth-email-passwordless)
+- [Redirect URL configuration](https://supabase.com/docs/guides/auth/redirect-urls)
+- [Server-verified user](https://supabase.com/docs/reference/javascript/auth-getuser)
 - [Row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security)
-- [Data API grants and exposure](https://supabase.com/docs/guides/api/securing-your-api)
-- [Official pinned SDK metadata](https://registry.npmjs.org/@supabase/supabase-js/2.118.0)
+- [Data API grants](https://supabase.com/docs/guides/api/securing-your-api)
+- [Official SDK package](https://registry.npmjs.org/@supabase/supabase-js/2.118.0)

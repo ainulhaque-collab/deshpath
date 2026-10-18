@@ -1,12 +1,14 @@
-/* Optional Supabase adapter. No cloud requests or uploads in the default local mode. */
+/* Supabase adapter. Local mode makes no requests; public reads and sign-in have separate gates. */
 (function (global) {
   'use strict';
   const config = global.DESH_CLOUD_CONFIG || {};
   const validURL = typeof config.url === 'string' && /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(config.url);
   const validKey = typeof config.publishableKey === 'string' && /^sb_publishable_[A-Za-z0-9_-]+$/.test(config.publishableKey);
   const enabled = config.enabled === true && validURL && validKey;
+  const authReady = enabled && config.authReady !== false;
   const subscribers = new Set();
-  let clientPromise = null;
+  let clientPromise = null, publicClientPromise = null, sdkPromise = null, callbackPromise = null;
+  const routeKey = 'deshpath.cloud.returnRoute';
   class CloudError extends Error {
     constructor(code, message) { super(message); this.name = 'DeshpathCloudError'; this.code = code; }
   }
@@ -24,7 +26,8 @@
   }
   function loadSDK() {
     if (typeof global.supabase?.createClient === 'function') return Promise.resolve(global.supabase);
-    return new Promise((resolve, reject) => {
+    if (sdkPromise) return sdkPromise;
+    sdkPromise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = 'assets/vendor/supabase-js-2.118.0.js';
       script.integrity = 'sha384-TcHRA3zBbn+Lexh5n+Oil4guNPOS3rjNDpGRAN46u/s/mB2IZ50ceC6TYDU2yvgK';
@@ -32,14 +35,15 @@
       script.onload = () => typeof global.supabase?.createClient === 'function' ? resolve(global.supabase) : reject(new CloudError('sdk-unavailable', 'The cloud library could not be initialised.'));
       script.onerror = () => { script.remove(); reject(new CloudError('sdk-unavailable', 'The cloud library could not be loaded. Try again when online.')); };
       document.head.appendChild(script);
-    });
+    }).catch(error => { sdkPromise = null; throw error; });
+    return sdkPromise;
   }
   function client() {
     assertEnabled();
     if (!clientPromise) {
       clientPromise = loadSDK().then(sdk => {
         const instance = sdk.createClient(config.url, config.publishableKey, {
-          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'deshpath.cloud.auth' }
+          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: 'pkce', storageKey: 'deshpath.cloud.auth' }
         });
         // Never await another auth call in the SDK's synchronous auth callback.
         instance.auth.onAuthStateChange((event, session) => {
@@ -51,6 +55,80 @@
       }).catch(error => { clientPromise = null; throw error; });
     }
     return clientPromise;
+  }
+  function publicClient() {
+    assertEnabled();
+    if (!publicClientPromise) {
+      publicClientPromise = loadSDK().then(sdk => sdk.createClient(config.url, config.publishableKey, {
+        // An isolated, nonpersisted client must never read the signed-in user's session.
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: 'deshpath.cloud.public' }
+      })).catch(error => { publicClientPromise = null; throw error; });
+    }
+    return publicClientPromise;
+  }
+  const safeRoute = value => typeof value === 'string' && /^#[a-z][a-z0-9-]{0,60}$/i.test(value) ? value : '';
+  function rememberRoute() {
+    try {
+      const hash = safeRoute(global.location.hash);
+      if (hash) global.localStorage.setItem(routeKey, JSON.stringify({ hash, at: Date.now() }));
+      else global.localStorage.removeItem(routeKey);
+    } catch { /* Route restoration is optional; browser privacy settings may block storage. */ }
+  }
+  function consumeRoute() {
+    try {
+      const saved = JSON.parse(global.localStorage.getItem(routeKey) || 'null');
+      global.localStorage.removeItem(routeKey);
+      if (saved && Date.now() - saved.at >= 0 && Date.now() - saved.at < 86400000) return safeRoute(saved.hash);
+    } catch { /* Never fail authentication because an optional route could not be read. */ }
+    return '';
+  }
+  function redirectURL() {
+    let url;
+    try { url = new URL(global.location.href); } catch { fail('invalid-redirect', 'A valid website URL is required for email sign-in.'); }
+    const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && local)) fail('invalid-redirect', 'Email sign-in requires HTTPS or a local development address.');
+    return url.origin + url.pathname;
+  }
+  async function requestEmail(value) {
+    assertEnabled();
+    if (!authReady) fail('auth-not-ready', 'Email sign-in is waiting for the project owner to verify Deshpath redirect URLs and the shared email settings. Public browsing and local journals remain available.');
+    const instance = await client(), email = emailValue(value), emailRedirectTo = redirectURL();
+    check(await instance.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo } }), 'Could not request a sign-in email');
+    rememberRoute();
+    return { accepted: true, email, method: 'email' }; // The shared project's existing template decides whether a link, code, or both are included.
+  }
+  function completeAuthCallback() {
+    if (callbackPromise) return callbackPromise;
+    let url;
+    try { url = new URL(global.location.href); } catch { return Promise.resolve({ handled: false }); }
+    const authKeys = ['code', 'sb_flow_id', 'error', 'error_code', 'error_description', 'token_hash', 'access_token', 'refresh_token', 'expires_at', 'expires_in', 'token_type', 'type'];
+    const fragment = new URLSearchParams(url.hash.slice(1));
+    const code = url.searchParams.get('code');
+    const flowId = url.searchParams.get('sb_flow_id');
+    const hasCode = url.searchParams.has('code');
+    const failed = url.searchParams.has('error') || url.searchParams.has('error_code') || url.searchParams.has('error_description') || fragment.has('error') || fragment.has('error_code') || fragment.has('error_description');
+    const tokenFragment = fragment.has('access_token') || fragment.has('refresh_token') || fragment.has('token_hash');
+    const unsupported = url.searchParams.has('token_hash') || url.searchParams.has('access_token') || url.searchParams.has('refresh_token') || tokenFragment;
+    if (!hasCode && !failed && !unsupported) return Promise.resolve({ handled: false });
+    // Remove credentials and auth errors before loading the SDK or making a request.
+    // Keep all unrelated query parameters and valid hash-based application routes.
+    for (const key of authKeys) url.searchParams.delete(key);
+    const existingRoute = safeRoute(url.hash);
+    const rememberedRoute = consumeRoute();
+    if (tokenFragment || failed && !existingRoute) url.hash = '';
+    if (!safeRoute(url.hash)) url.hash = existingRoute || rememberedRoute;
+    global.history.replaceState(global.history.state, '', url.pathname + url.search + url.hash);
+    callbackPromise = (async () => {
+      assertEnabled();
+      if (failed || unsupported || !code || code.length > 4096 || flowId && flowId.length > 256) fail('invalid-auth-link', 'This sign-in link is expired or unsupported. Request a new email, then open its link in the same browser and device.');
+      const instance = await client();
+      const exchanged = flowId ? await instance.auth.exchangeCodeForSession(code, { flowId }) : await instance.auth.exchangeCodeForSession(code);
+      if (exchanged.error) fail('invalid-auth-link', 'The sign-in link could not be verified. Request a new email and use the same browser and device where you requested it.');
+      const user = await getUser();
+      if (!user) fail('invalid-auth-link', 'The sign-in session could not be verified. Request a new sign-in email.');
+      return { handled: true, user };
+    })();
+    return callbackPromise;
   }
   function emailValue(value) {
     const email = String(value || '').trim().toLowerCase();
@@ -98,16 +176,14 @@
   }
   const api = {
     get enabled() { return enabled; },
-    getStatus() { return { enabled, mode: enabled ? 'cloud-ready' : 'local', reason: enabled ? null : config.enabled === true ? 'invalid-configuration' : 'not-configured' }; },
+    getStatus() { return { enabled, authReady, mode: enabled ? authReady ? 'cloud-ready' : 'cloud-public-only' : 'local', reason: enabled ? authReady ? null : 'auth-setup-pending' : config.enabled === true ? 'invalid-configuration' : 'not-configured' }; },
     getUser,
-    async requestOtp(value) {
-      const instance = await client(), email = emailValue(value);
-      check(await instance.auth.signInWithOtp({ email, options: { shouldCreateUser: true } }), 'Could not request a sign-in code');
-      return { accepted: true, email }; // Accepted by Auth; delivery still depends on the configured email service.
-    },
+    requestOtp: requestEmail,
+    requestMagicLink: requestEmail,
+    completeAuthCallback,
     async verifyOtp(value, suppliedToken) {
       const instance = await client(), email = emailValue(value), token = String(suppliedToken || '').trim();
-      if (!/^\d{6}$/.test(token)) fail('invalid-otp', 'Enter the six-digit code from your email.');
+      if (!/^\d{6,10}$/.test(token)) fail('invalid-otp', 'Enter the code from your sign-in email, if it includes one.');
       check(await instance.auth.verifyOtp({ email, token, type: 'email' }), 'Could not verify the sign-in code');
       return getUser();
     },
@@ -146,11 +222,11 @@
       return check(await instance.from('deshpath_reviews').insert(payload).select('id,place_id,rating,body,status,created_at').single(), 'Could not submit your review');
     },
     async listApprovedContributions() {
-      const instance = await client();
+      const instance = await publicClient();
       return check(await instance.from('deshpath_contributions').select('id,district_id,title,body,published_at').eq('status', 'approved').order('published_at', { ascending: false }).limit(100), 'Could not load published stories') || [];
     },
     async listApprovedReviews(placeId) {
-      const instance = await client();
+      const instance = await publicClient();
       let query = instance.from('deshpath_reviews').select('id,place_id,rating,body,published_at').eq('status', 'approved');
       if (placeId) query = query.eq('place_id', dataId(placeId, 'places', 'destination'));
       return check(await query.order('published_at', { ascending: false }).limit(100), 'Could not load published reviews') || [];
