@@ -17,8 +17,24 @@
     if (!enabled) fail('cloud-disabled', 'Cloud features are not configured. Your data is still stored only in this browser.');
   }
   function safeUser(user) { return user?.id && user.email && user.is_anonymous !== true ? { id: user.id, email: user.email } : null; }
+  function providerError(error) {
+    const code = String(error?.code || '').toLowerCase();
+    if (['over_email_send_rate_limit', 'over_request_rate_limit'].includes(code) || Number(error?.status) === 429) {
+      return new CloudError('cloud-rate-limited', 'The online service has reached its request limit. Wait a while before trying again. Your local data is still saved.');
+    }
+    const emailCodes = ['email_address_not_authorized', 'email_provider_disabled', 'otp_disabled', 'email_send_failed', 'smtp_config_error', 'smtp_not_configured', 'smtp_error'];
+    // Current Auth errors have codes. The narrow message fallback covers older
+    // SMTP responses returned as unexpected_failure or without a specific code.
+    const legacySMTP = (!code || code === 'unexpected_failure') && /\bsmtp\b|email address not authorized|error sending (?:confirmation|magic link|recovery|invite|email)|unable to send email/i.test(String(error?.message || ''));
+    if (emailCodes.includes(code) || legacySMTP) {
+      return new CloudError('email-unavailable', 'The email service cannot send a sign-in email right now. The site owner should check its email service and settings. Your local journal remains available.');
+    }
+    return null;
+  }
   function check(result, operation) {
     if (result.error) {
+      const provider = providerError(result.error);
+      if (provider) throw provider;
       const duplicate = result.error.code === '23505';
       fail(duplicate ? 'already-submitted' : 'cloud-request-failed', duplicate ? 'You have already submitted a review for this place.' : operation + ': ' + (result.error.message || 'The request could not be completed.'));
     }
@@ -123,7 +139,11 @@
       if (failed || unsupported || !code || code.length > 4096 || flowId && flowId.length > 256) fail('invalid-auth-link', 'This sign-in link is expired or unsupported. Request a new email, then open its link in the same browser and device.');
       const instance = await client();
       const exchanged = flowId ? await instance.auth.exchangeCodeForSession(code, { flowId }) : await instance.auth.exchangeCodeForSession(code);
-      if (exchanged.error) fail('invalid-auth-link', 'The sign-in link could not be verified. Request a new email and use the same browser and device where you requested it.');
+      if (exchanged.error) {
+        const provider = providerError(exchanged.error);
+        if (provider) throw provider;
+        fail('invalid-auth-link', 'The sign-in link could not be verified. Request a new email and use the same browser and device where you requested it.');
+      }
       const user = await getUser();
       if (!user) fail('invalid-auth-link', 'The sign-in session could not be verified. Request a new sign-in email.');
       return { handled: true, user };

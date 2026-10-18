@@ -14,9 +14,9 @@ function environment(enabled, session = true, href = 'https://deshpath.vercel.ap
     auth: {
       onAuthStateChange(callback) { calls.push(['auth-listener']); this.callback = callback; return { data: { subscription: { unsubscribe() {} } } }; },
       async getUser() { calls.push(['getUser']); return session ? { data: { user: own }, error: null } : { data: { user: null }, error: { name: 'AuthSessionMissingError' } }; },
-      async signInWithOtp(args) { calls.push(['requestOtp', args]); return { data: { user: null, session: null }, error: null }; },
+      async signInWithOtp(args) { calls.push(['requestOtp', args]); return { data: { user: null, session: null }, error: options.emailError || null }; },
       async verifyOtp(args) { calls.push(['verifyOtp', args]); return { data: { user: own, session: {} }, error: null }; },
-      async exchangeCodeForSession(code, flow) { calls.push(['exchange', code, flow]); return options.exchangeError ? { data: null, error: { message: 'An error containing sensitive-code-DO-NOT-ECHO' } } : { data: { user: own, session: {} }, error: null }; },
+      async exchangeCodeForSession(code, flow) { calls.push(['exchange', code, flow]); return options.exchangeError ? { data: null, error: typeof options.exchangeError === 'object' ? options.exchangeError : { message: 'An error containing sensitive-code-DO-NOT-ECHO' } } : { data: { user: own, session: {} }, error: null }; },
       async refreshSession() { calls.push(['refresh']); return { data: { user: own }, error: null }; },
       async signOut(args) { calls.push(['signOut', args]); return { error: null }; }
     },
@@ -54,6 +54,20 @@ function environment(enabled, session = true, href = 'https://deshpath.vercel.ap
   const e = environment(true), api = e.api;
   assert.equal(api.enabled, true);
   assert.equal(api.getStatus().authReady, true);
+  for (const [emailError, expected] of [
+    [{status:429,message:'Provider limit'},'cloud-rate-limited'],
+    [{code:'over_email_send_rate_limit',status:422,message:'Email limit'},'cloud-rate-limited'],
+    [{code:'over_request_rate_limit',status:422,message:'Request limit'},'cloud-rate-limited'],
+    [{code:'email_address_not_authorized',status:403,message:'Address not allowed'},'email-unavailable'],
+    [{code:'email_provider_disabled',status:422,message:'Email disabled'},'email-unavailable'],
+    [{code:'unexpected_failure',status:500,message:'Error sending magic link email: secret-value'},'email-unavailable'],
+    [{status:500,message:'SMTP configuration invalid: secret-value'},'email-unavailable'],
+    [{code:'unexpected_failure',status:500,message:'Database trigger failed'},'cloud-request-failed']
+  ]) {
+    const failure=environment(true,true,'https://deshpath.vercel.app/#passport',{emailError});
+    await assert.rejects(failure.api.requestMagicLink('a@example.com'),error=>error.code===expected&&!error.message.includes('secret-value'));
+    assert.equal(failure.calls.filter(call=>call[0]==='requestOtp').length,1,'Provider failures must not automatically resend email');
+  }
   const setupPending = environment(true, true, 'https://deshpath.vercel.app/', { authReady: false });
   assert.equal(setupPending.api.getStatus().mode, 'cloud-public-only');
   await assert.rejects(setupPending.api.requestOtp('a@example.com'), error => error.code === 'auth-not-ready');
@@ -113,6 +127,9 @@ function environment(enabled, session = true, href = 'https://deshpath.vercel.ap
   await assert.rejects(failedCallback.api.completeAuthCallback(), error => error.code === 'invalid-auth-link' && !error.message.includes('sensitive-code'));
   assert.equal(failedCallback.location.href, 'https://deshpath.vercel.app/#passport');
   assert.equal((await failedCallback.api.getUser()).id, 'owner-a', 'A failed callback does not permanently block later auth operations');
+  const limitedCallback=environment(true,true,'https://deshpath.vercel.app/?code=valid#passport',{exchangeError:{status:429,code:'over_request_rate_limit'}});
+  await assert.rejects(limitedCallback.api.completeAuthCallback(),error=>error.code==='cloud-rate-limited');
+  assert.equal(limitedCallback.location.href,'https://deshpath.vercel.app/#passport');
   const errorURL = environment(true, true, 'https://deshpath.vercel.app/?utm=kept#error=access_denied&error_description=unsafe');
   await assert.rejects(errorURL.api.completeAuthCallback(), error => error.code === 'invalid-auth-link'); assert.equal(errorURL.location.href, 'https://deshpath.vercel.app/?utm=kept');
   assert(!errorURL.calls.some(c => c[0] === 'exchange'));
@@ -131,5 +148,5 @@ function environment(enabled, session = true, href = 'https://deshpath.vercel.ap
   const sdk = fs.readFileSync(path.join(app, 'assets/vendor/supabase-js-2.118.0.js'));
   assert.equal('sha384-' + crypto.createHash('sha384').update(sdk).digest('base64'), metadata.assetIntegrity);
   assert(source.includes(metadata.assetIntegrity));
-  console.log('Cloud adapter mock/security assertions passed: disabled mode, OTP+PKCE auth contracts, one-time callback+flow ID, immediate URL cleanup, safe route restoration, verified user, anonymous public-client isolation, owner payloads, pending inserts, input rejection, SQL structure and pinned SDK integrity. No live database or email test was performed.');
+  console.log('Cloud adapter mock/security assertions passed: disabled mode, OTP+PKCE auth contracts, one-time callback+flow ID, immediate URL cleanup, safe route restoration, verified user, anonymous public-client isolation, owner payloads, pending inserts, input rejection, provider rate/config error classification without automatic resend, SQL structure and pinned SDK integrity. No live database or email test was performed.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

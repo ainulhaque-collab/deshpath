@@ -2,23 +2,22 @@
 
 ## Deployment record — 18 October 2026
 
-The owner approved the existing **PestGurd — Development Test** project (`sfzitbasxrpmtmldujbm`, Singapore) for Deshpath. Three new `public.deshpath_` tables and one namespaced journal timestamp trigger were added. Existing application tables, data, roles, functions, email templates and Auth settings were not changed. No paid project or upgrade was created.
+The owner approved the existing **PestGurd — Development Test** project (`sfzitbasxrpmtmldujbm`, Singapore) for Deshpath. Three new `public.deshpath_` tables and one namespaced journal timestamp trigger were added. Existing application tables, data, roles, functions, email templates and the existing Site URL were not changed. Three exact Deshpath callback URLs were appended to the redirect allowlist on 18 October 2026. No paid project or upgrade was created.
 
 Applied remote migration: `20261018032314_deshpath_private_journal_moderated_text_v1`.
 `setup.sql` is the exact additive initial schema. **Do not rerun it**: it deliberately fails on existing object names. Future changes require separate reviewed migrations.
 
 The browser has only a modern publishable key. It has no service key, database password or management credential. The SDK is pinned to official Supabase JS 2.118.0, bundled locally with SRI and MIT licence.
 
-**Current state:** database connected; approved public text/reviews can be read. Email sign-in, personal cloud save/load and online submissions are held behind `authReady: false`. The owner will sign in to the Supabase dashboard later. No sign-in email has been sent during implementation, and no successful real email login is claimed. Empty feeds display an honest empty state, without demonstration posts or ratings.
+**Current state:** email-link sign-in, explicit private journal save/load and text-only submissions are enabled with `authReady: true`. Gmail SMTP was saved by the owner and real inbox delivery plus a PKCE callback were verified. The owner created and entered the dedicated App Password directly in the dashboards; it is absent from the repository and browser configuration. Empty public feeds show an honest empty state, without demonstration posts or ratings.
 
-## Finish email sign-in
+## Email delivery and operations
 
-1. Sign in to the existing project [URL Configuration](https://supabase.com/dashboard/project/sfzitbasxrpmtmldujbm/auth/url-configuration).
-2. Preserve its existing Site URL and redirect entries. Add the exact Deshpath return URL `https://deshpath.vercel.app/`. For local testing add only origins used: `http://127.0.0.1:4173/` and `http://localhost:4173/`. Do not add wildcard origins.
-3. Review existing email delivery/provider, expiry, rate limits and templates. Email and signup were enabled at inspection; automatic email confirmation, Google and anonymous sign-ins were disabled. These settings were not changed. The shared template should use its normal confirmation URL/redirect rather than hardcoding another app's return address. Do not globally replace its template or Site URL for Deshpath.
-4. Temporarily set `authReady: true` for a controlled local test after the local redirect is allowed. Request a sign-in email using an account you control. Open its link in the **same browser and device** that requested it. The adapter uses PKCE; a code verifier is stored locally. If the shared template includes an email code, its 6–10 digits can also be entered. A successful request is not proof of delivery.
-5. Test expiry, retry, reload, sign-out and refresh; use two real accounts to check independent saves. Confirm the shared project's email service can deliver to intended visitors. Default delivery restrictions may limit public signup; configure a suitable sender through the project owner if needed.
-6. Set `authReady: true` in the production configuration and push only after these checks pass. Test the exact production return URL. Until then the public interface deliberately shows setup pending and does not send email requests.
+1. Saved exact callbacks: `https://deshpath.vercel.app/`, `http://127.0.0.1:4173/` and `http://localhost:4173/`. The existing application's Site URL and redirect entry remain intact. Do not add wildcard origins. A separate local QA origin is temporary and must be removed after testing.
+2. The owner approved Gmail SMTP for an initial pilot without an owned domain: `smtp.gmail.com`, TLS port `465`, the owner's matching Gmail username/sender, and neutral sender name `Account Support`. SMTP is project-wide and also serves the other application's Auth emails. Existing email templates, verification requirements and provider settings were preserved; Google OAuth is not enabled by using Gmail as a sender.
+3. Gmail is a limited pilot sender, subject to daily, per-recipient and abuse limits shared with normal mailbox use. Supabase also enforces its own project/IP/email limits. Keep conservative limits and monitor delivery; move to a verified domain and transactional provider before a broad launch. This setup is not a promise of unlimited or guaranteed delivery.
+4. Request a link from the exact origin you will use and open it in the **same browser and device**. `localhost` and `127.0.0.1` are different origins. The adapter uses PKCE, removes callback parameters immediately and verifies the user on the Auth server. The existing template sends a link; the optional code form only applies when a template includes a code. A successful request alone is not proof of delivery.
+5. Recheck inbox delivery, callback, session persistence, save/load confirmation and sign-out after changing the sender, templates, Auth configuration or deployment origin. Use separately controlled accounts for further delivery-provider testing; never upload genuine local journals merely to test the connection. Set `authReady: false` to stop new email requests during a delivery outage while retaining local journals and approved public reads.
 
 The shared project's Auth identity pool and delivery limits are shared with its other application. Deshpath uses a separate browser session storage key and namespaced app tables. Do not delete a shared Auth user as an app-only account deletion action.
 
@@ -43,9 +42,11 @@ Live PostgreSQL assertions exercised the actual `authenticated` and `anon` roles
 
 Real HTTP Data API checks with the publishable key returned HTTP 200 and empty arrays for approved stories/reviews, and HTTP 401 / PostgreSQL 42501 for private journals and author UUID reads. No posts were fabricated for production.
 
-Security advisors reported no Deshpath-specific findings. Performance advisors only noted newly created, not-yet-used publication indexes, which are retained for feed queries. Existing unrelated project advisories were not changed; this was not an audit of the other application's private code. A read of that code was declined by automatic approval review as outside Deshpath scope and was not retried.
+Security advisors reported no Deshpath-specific findings. Performance advisors only noted newly created, not-yet-used publication indexes, which are retained for feed queries. Existing unrelated project advisories were not changed; this was not an audit of the other application's private code.
 
-Unit tests cover PKCE callback exchange/cleanup, route restoration, auth setup gating, isolated public client, payload validation, SRI and grant/policy structure. These are not a substitute for the pending real email/session tests above.
+On 18 October 2026, a controlled browser test received the real email in the owner's inbox and completed the PKCE callback. Reload retained the verified session. An explicitly saved QA journal was read back and restored only after confirmation; a local change remained intact until that confirmation. A scoped SQL check confirmed photo-assignment/avatar/group fields and embedded images were absent from the saved snapshot. Sign-out restored the email form and left the local journal intact. With the owner's explicit approval, only the marked QA cloud snapshot was deleted afterwards; the shared Auth identity was retained. The temporary local QA redirect was removed. No public story or rating was fabricated for this test. This is one real email identity plus two synthetic rollback-only RLS identities, not a claim that two real inboxes were tested.
+
+Unit tests cover PKCE exchange/cleanup, route restoration, setup gating, isolated public reads, payload validation, SRI, grant/policy structure, fixed bilingual rate/SMTP errors, empty-cloud guidance, photo-field omission, restore confirmation and error visibility after an Auth rerender. The real pinned SDK was also exercised with mocked HTTP for repeated user/journal reads; no speculative auth-lock workaround was introduced.
 
 ## Adapter contract
 
@@ -59,6 +60,8 @@ Other methods: `getUser`, `refreshSession`, `signOut` (this device), `onAuthChan
 - [Passwordless email and PKCE](https://supabase.com/docs/guides/auth/auth-email-passwordless)
 - [Redirect URL configuration](https://supabase.com/docs/guides/auth/redirect-urls)
 - [Server-verified user](https://supabase.com/docs/reference/javascript/auth-getuser)
+- [Google SMTP with Supabase](https://supabase.com/docs/guides/troubleshooting/using-google-smtp-with-supabase-custom-smtp-ZZzU4Y)
+- [Google App Passwords](https://support.google.com/accounts/answer/185833) and [Gmail sending limits](https://support.google.com/mail/answer/22839?hl=en)
 - [Row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security)
 - [Data API grants](https://supabase.com/docs/guides/api/securing-your-api)
 - [Official SDK package](https://registry.npmjs.org/@supabase/supabase-js/2.118.0)
