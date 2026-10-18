@@ -59,6 +59,7 @@
       records[key] = previous === undefined ? score : (lowerIsBetter ? Math.min(Number(previous), score) : Math.max(Number(previous), score));
       storage.set('gamesRecords', records);
       global.dispatchEvent(new CustomEvent('deshpath:gameschange', {detail:{records:{...records}}}));
+      global.DESH_ACTIVITY?.record('game_completed',{game:active});
     }
     function mapMarkup(mode, classes = {}) {
       const paths = geometry.map(p => `<path d="${p.d}" data-game-district="${p.id}" class="dp-game-region ${classes[p.id] || ''}"><title>${esc(name(p.id))}</title></path>`).join('');
@@ -102,6 +103,7 @@
         });
       } else if (id === 'knowledge') { game.rounds = shuffle(knowledgePool()).slice(0, 5); }
       else if (id === 'personality') { game.scores = [0, 0, 0, 0]; game.answers = []; }
+      global.DESH_ACTIVITY?.record('game_started',{game:id});
       render(true);
     }
     function hubMarkup() {
@@ -162,6 +164,7 @@
     }
     function placePuzzle(id) {
       if (active !== 'puzzle' || game.done || !districtById.has(id)) return;
+      global.DESH_ACTIVITY?.record('game_activity',{game:active});
       const target = game.targets[game.placed.length];
       if (id === target) {
         game.placed.push(target);
@@ -176,6 +179,7 @@
       if (!['farthest', 'knowledge'].includes(active) || game.done || game.answer !== null) return;
       const q = game.rounds[game.index], choices = active === 'farthest' ? q.choices.map(d => d.id) : q.choices;
       if (!choices.includes(id)) return;
+      global.DESH_ACTIVITY?.record('game_activity',{game:active});
       game.answer = id; if (id === q.correct) game.score++;
       render(true, true);
     }
@@ -192,7 +196,8 @@
       if (personality && active === 'personality' && !game.done) {
         const index = Number(personality.dataset.gamePersonality); if (!Number.isInteger(index) || index < 0 || index > 3) return;
         game.scores[index]++; game.answers.push(index); game.index++;
-        if (game.index === personalityQuestions.length) game.done = true;
+        global.DESH_ACTIVITY?.record('game_activity',{game:active});
+        if (game.index === personalityQuestions.length) { game.done = true; global.DESH_ACTIVITY?.record('game_completed',{game:active}); }
         render(true, game.done); return;
       }
       const control = event.target.closest('[data-game-action]'); if (!control || !active) return;
@@ -202,6 +207,7 @@
       if (cmd === 'photo-submit' && active === 'photo' && !game.done && game.answer === null) {
         const selected = root.querySelector('[data-game-select]').value; if (!districtById.has(selected)) { helpers.toast(tr('ম্যাপ বা তালিকা থেকে জেলা বেছে নিন।', 'Choose a district on the map or in the list.')); return; }
         game.selected = selected; game.answer = selected;
+        global.DESH_ACTIVITY?.record('game_activity',{game:active});
         const correct = game.rounds[game.index].district, points = selected === correct ? 1000 : photoScore(distanceKm(districtById.get(selected), districtById.get(correct)));
         game.results.push(points); game.score += points; render(true, true); return;
       }

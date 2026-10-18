@@ -78,12 +78,18 @@
     return (item.zoom===undefined||finite(item.zoom,1,3))&&(item.panX===undefined||finite(item.panX,0,100))&&(item.panY===undefined||finite(item.panY,0,100));
   }
   function knownIds(){return {districts:new Set((window.DESH_DATA?.districts||[]).map(d=>d.id)),places:new Set((window.DESH_DATA?.places||[]).map(p=>p.id)),world:new Set((window.DESH_WORLD?.countries||[]).map(c=>c.id)),divisions:new Set((window.DESH_DATA?.divisions||[]).map(d=>d.id))};}
+  // An approved community place may not have arrived from the online catalog
+  // yet. Preserve its opaque reference in private backups and notes; this does
+  // not publish it or assert that a visit was verified.
+  const communityPlaceId=value=>typeof value==='string'&&/^community-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  const placeReference=(value,ids=knownIds())=>ids.places.has(value)||communityPlaceId(value);
   const list=(value,valid,max)=>Array.isArray(value)&&value.length<=max&&new Set(value).size===value.length&&value.every(id=>typeof id==='string'&&valid.has(id));
   function validDraft(item){const ids=knownIds();return plain(item)&&safeId(item.id)&&['place','food'].includes(item.kind)&&ids.districts.has(item.district)&&text(item.title,100,3)&&text(item.area,100,1)&&text(item.description,2000,50)&&text(item.directions,1000,20)&&text(item.notes??'',1000)&&text(item.author??'',60)&&date(item.createdAt)&&(item.photoId==null||safeId(item.photoId));}
-  function validReview(item){const ids=knownIds();return plain(item)&&safeId(item.id)&&ids.places.has(item.placeId)&&integer(item.rating,1,5)&&text(item.body,1000,10)&&date(item.createdAt)&&(item.photoId==null||safeId(item.photoId));}
+  function validReview(item){const ids=knownIds();return plain(item)&&safeId(item.id)&&placeReference(item.placeId,ids)&&integer(item.rating,1,5)&&text(item.body,1000,10)&&date(item.createdAt)&&(item.photoId==null||safeId(item.photoId));}
   function validValues(key,item){
     const ids=knownIds();
-    if(['visited','favorites','passportPlaces','worldVisited'].includes(key))return list(item,key==='visited'?ids.districts:key==='worldVisited'?ids.world:ids.places,key==='visited'?64:key==='worldVisited'?300:ids.places.size);
+    if(['favorites','passportPlaces'].includes(key))return Array.isArray(item)&&item.length<=1100&&new Set(item).size===item.length&&item.every(id=>placeReference(id,ids));
+    if(['visited','worldVisited'].includes(key))return list(item,key==='visited'?ids.districts:ids.world,key==='visited'?64:300);
     if(key==='profile')return plain(item)&&text(item.name??'',60)&&text(item.bio??'',250)&&Object.keys(item).every(k=>['name','bio'].includes(k));
     if(key==='contributions'||key==='reviews')return Array.isArray(item)&&item.length<=100&&new Set(item.map(r=>r?.id)).size===item.length&&item.every(key==='contributions'?validDraft:validReview);
     if(key==='mapAvatar')return item===null||dimensions(item);

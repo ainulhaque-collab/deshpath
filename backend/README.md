@@ -1,5 +1,9 @@
 # Deshpath Supabase connection
 
+## Community release v2 — 18 October 2026
+
+The moderated photo/destination/review system, owner administration, in-app notifications and server-scored online games are documented in [COMMUNITY.md](COMMUNITY.md) and [GAMES.md](GAMES.md). These additive changes preserve the v1 journal and text tables described below. Selected submission photographs now upload only after explicit consent; private journal/gallery photographs still do not upload automatically. The earlier deployment record below describes v1, not the current photo workflow.
+
 ## Deployment record — 18 October 2026
 
 The owner approved the existing **PestGurd — Development Test** project (`sfzitbasxrpmtmldujbm`, Singapore) for Deshpath. Three new `public.deshpath_` tables and one namespaced journal timestamp trigger were added. Existing application tables, data, roles, functions, email templates and the existing Site URL were not changed. Three exact Deshpath callback URLs were appended to the redirect allowlist on 18 October 2026. No paid project or upgrade was created.
@@ -9,7 +13,7 @@ Applied remote migration: `20261018032314_deshpath_private_journal_moderated_tex
 
 The browser has only a modern publishable key. It has no service key, database password or management credential. The SDK is pinned to official Supabase JS 2.118.0, bundled locally with SRI and MIT licence.
 
-**Current state:** email-link sign-in, explicit private journal save/load and text-only submissions are enabled with `authReady: true`. Gmail SMTP was saved by the owner and real inbox delivery plus a PKCE callback were verified. The owner created and entered the dedicated App Password directly in the dashboards; it is absent from the repository and browser configuration. Empty public feeds show an honest empty state, without demonstration posts or ratings.
+**v1 state:** email-link sign-in, explicit private journal save/load and text-only submissions are enabled with `authReady: true`. Gmail SMTP was saved by the owner and real inbox delivery plus a PKCE callback were verified. The owner created and entered the dedicated App Password directly in the dashboards; it is absent from the repository and browser configuration. Empty public feeds show an honest empty state, without demonstration posts or ratings.
 
 ## Email delivery and operations
 
@@ -65,3 +69,33 @@ Other methods: `getUser`, `refreshSession`, `signOut` (this device), `onAuthChan
 - [Row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security)
 - [Data API grants](https://supabase.com/docs/guides/api/securing-your-api)
 - [Official SDK package](https://registry.npmjs.org/@supabase/supabase-js/2.118.0)
+
+## Community release backend
+
+The new API is `deshpath-community`. Apply `community.sql`, then `games.sql` and the original-catalog seed. Existing deployments apply the final `community-moderation-update.sql` with a new migration name. The three v1 tables remain unchanged. New tables have RLS and no browser grants. Moderation RPCs execute only as `service_role`, check active Deshpath admin membership, and atomically update publications, proposal status, notifications and audit history.
+
+Deploy `functions/deshpath-community/index.ts` with `verify_jwt=false`. Public and private actions intentionally share one endpoint; each private request calls `auth.getUser(userJWT)` and requires a confirmed, non-anonymous email identity. The publishable key belongs in `apikey`, never in the Bearer header. Server credentials come only from platform secret environment variables. Do not add service keys to client configuration, screenshots or Git.
+
+Runtime sources are `index.ts`, `context.mjs`, `validation.mjs`, `community.mjs`, `dashboard.mjs`, `media.mjs`, `games.mjs` and `games-data.mjs`; retain `deno.json` and `deno.lock`. npm imports pin Supabase JS 2.118.0, jpeg-js 0.4.4 and exifr 7.1.3. `dependencies.json` records official npm integrity metadata. Exact permitted origins can be set with `DESHPATH_ALLOWED_ORIGINS`; defaults are the production URL and localhost/127.0.0.1 ports 4173/4174.
+
+An authorized owner runs `admin.setup` to create only `deshpath-private` and `deshpath-public` using the Storage API. Originals and prepared previews remain private. Approval copies only the re-encoded derivative to `deshpath-public/approved/{mediaId}/{attemptId}.jpg`. Failed publication uses the service-only rollback RPC; an asset referenced by any committed publication is retained. Prepared previews expire after 10 minutes. Only admin queue/moderation responses include an additional 10 minute `originalUrl`; visitor profile/upload results and public feeds never include original links or private metadata.
+
+Originals are limited to 5 MiB, JPEG/PNG/WebP signatures and 24 MP. Prepared JPEGs are limited to 700 KiB, 1600 pixels per edge and 1.6 MP. The server strictly decodes and re-encodes their pixels under a 64 MiB decoder allocation budget. EXIF/GPS is extracted from original bytes into private review signals and is absent from published JPEGs. A client can supply an unrelated prepared image: moderators must compare the private original with the prepared image before approval. Dates/GPS are editable signals, not proof of travel or ownership.
+
+`admin.moderate` requires the queue item's `revision` for submissions/reviews. A stale revision fails without publication. Identical approvals are no-ops; edited approval advances `revision` and `published_revision`. A new pending duplicate can merge into an existing canonical destination. Moving an already published destination to a different canonical ID fails with `conflict`; historical review transfer is not implemented. Archiving a merged proposal cannot archive another canonical owner or a built-in destination. Built-in archive fails explicitly because the static 16-place fallback retains those IDs.
+
+The endpoint returns `{error:{code}}` with fixed codes, never raw provider messages:
+
+| Codes | Meaning |
+| --- | --- |
+| `sign-in-required`, `admin-required` | A verified visitor/admin identity is required. |
+| `invalid-input`, `invalid-image`, `invalid-photo`, `consent-required`, `reason-required` | Correct the bounded form, image or explicit consent. |
+| `not-found`, `unknown-action`, `method-not-allowed`, `origin-not-allowed` | Missing resource or unsupported request. |
+| `conflict`, `revision-conflict`, `builtin-protected` | Refresh the queue or use the supported canonical workflow. |
+| `request-too-large`, `rate-limited` | Request/body or server-side rate limit. Guest analytics has a per-session limit and a shared 600/minute ceiling; no IP/location is stored. |
+| `service-unavailable`, `storage-configuration` | Backend/provider setup or temporary request failure. |
+| `invalid-game`, `invalid-answer`, `game-not-found`, `game-closed`, `game-conflict`, `game-rate-limited`, `daily-attempt-used`, `game-service-unavailable`, `analytics-unavailable` | Fixed online game/analytics errors. |
+
+Admin game/request totals are exact 24 hour counts. Recent named online-game activity uses a 2 minute window and bounded rows; necessary account/game records are distinct from optional consenting practice/export analytics. Guest numbers estimate browser sessions. Export breakdowns use the latest1,000 consenting events; photo-byte summaries sample at most5,000 originals. Download/print request counters do not prove successful file saves.
+
+Local verification: `node tests/backend-community.test.cjs` passes authorization, public privacy projections, ownership, request bounds, revisions and safe media rollback tests. From the function folder, `deno check index.ts` passes and `deno test media.test.ts` passes 2 real-codec tests, including GPS extraction/removal and rejection of a truncated JPEG. `community-moderation-qa.sql` is a rollback-only administrative regression script for edited approvals, idempotence, stale revisions, canonical protection and review revisions; it does not perform Storage or Auth mutations. Remote moderation/upload end-to-end checks must be recorded separately after deployment; local mocks are not evidence of that completion.

@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 global.window={};
 require('../data.js');require('../world-data.js');
 const store=new Map([['deshpath.gamesRecords',JSON.stringify({photo:815,'puzzle-easy':43})]]);
-global.localStorage={get length(){return store.size},key:i=>[...store.keys()][i],getItem:key=>store.get(key)||null};
+global.localStorage={get length(){return store.size},key:i=>[...store.keys()][i],getItem:key=>store.get(key)||null,setItem:(key,value)=>store.set(key,value),removeItem:key=>store.delete(key)};
 require('../journal-kit.js');
 const kit=window.DESH_JOURNAL;
 const media={id:'map-safe',src:'data:image/png;base64,AA==',width:100,height:80,bytes:1,box:{x:0,y:0,width:40,height:50},zoom:1,panX:50,panY:50};
@@ -23,6 +23,10 @@ pass('reject non-finite geometry',b=>b.media[0]={...media,box:{x:Infinity,y:0,wi
 pass('reject invalid zoom',b=>b.media[0]={...media,zoom:99});
 pass('reject invalid crop',b=>b.media[0]={...media,panY:-1});
 pass('reject missing place',b=>b.values.reviews[0]={...review,placeId:'invented'});
+const communityId='community-10000000-0000-4000-8000-000000000001';
+pass('preserve unloaded approved community references',b=>{b.values.favorites.push(communityId);b.values.passportPlaces.push(communityId);b.values.reviews[0]={...review,placeId:communityId};},true);
+pass('reject malformed community identifier',b=>b.values.passportPlaces.push('community-not-a-uuid'));
+pass('reject duplicate community references',b=>b.values.favorites=[communityId,communityId]);
 pass('reject unknown district',b=>b.values.visited=['invalid']);
 pass('reject duplicate selected districts',b=>b.values.visited=['dhaka','dhaka']);
 pass('reject unknown world id',b=>b.values.worldVisited=['invented']);
@@ -31,4 +35,12 @@ pass('reject unknown game key',b=>b.values.gamesRecords={injected:99});
 pass('accept null empty-trip inputs',b=>b.values.trip={origin:'',destinations:[],days:null,travelers:null,budget:null},true);
 pass('accept supported maximum active-media count above old200',b=>b.media=Array.from({length:266},(_,i)=>({...media,id:'map-'+i})),true);
 console.log('Journal backup checks passed:',count);
+(async()=>{
+  const restored=[];
+  global.indexedDB={open(){const request={};queueMicrotask(()=>{request.result={transaction(){const tx={objectStore:()=>({put:item=>restored.push(item)})};queueMicrotask(()=>tx.oncomplete?.());return tx;},close(){}};request.onsuccess();});return request;}};
+  const data=structuredClone(backup());data.values.favorites.push(communityId);data.values.passportPlaces.push(communityId);data.values.reviews[0].placeId=communityId;
+  await kit.restoreBackup(data);
+  assert.ok(JSON.parse(store.get('deshpath.favorites')).includes(communityId));assert.ok(JSON.parse(store.get('deshpath.passportPlaces')).includes(communityId));assert.equal(JSON.parse(store.get('deshpath.reviews'))[0].placeId,communityId);assert.equal(restored.length,1);
+  console.log('PASS: offline restoration retains community place favorites, stamps, private review and its media without requiring a loaded catalog.');
+})().catch(error=>{console.error(error);process.exitCode=1;});
 

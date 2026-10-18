@@ -1,0 +1,5 @@
+{
+  "compilerOptions": {"checkJs":false,"strict":false},
+  "nodeModulesDir":"auto",
+  "lock":"deno.lock"
+}

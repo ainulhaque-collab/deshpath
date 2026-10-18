@@ -194,10 +194,92 @@
     };
     const clean = JSON.parse(json); walk(clean); return clean;
   }
+  const publicActions = new Set(['catalog.list', 'reviews.list', 'leaderboard.list', 'profile.public', 'analytics.record']);
+  const communityMessages = {
+    'sign-in-required': 'Sign in before continuing.', 'forbidden': 'This action requires Deshpath administrator access.',
+    'invalid-input': 'Check the information and try again.', 'not-found': 'This item is no longer available.',
+    'rate-limited': 'Please wait before trying again.', 'conflict': 'This item changed. Refresh and try again.',
+    'file-too-large': 'Choose a photo smaller than 5 MB.', 'invalid-image': 'Choose a valid JPEG, PNG or WebP photo.',
+    'storage-unavailable': 'Photo storage is temporarily unavailable.', 'consent-required': 'Confirm the photo and publication permissions first.',
+    'admin-required': 'This action requires Deshpath administrator access.', 'revision-conflict': 'This item changed. Refresh before reviewing it again.',
+    'invalid-photo': 'Choose valid photos belonging to your account.', 'reason-required': 'Add a reason for this decision.', 'builtin-protected': 'The original editorial destination is protected.',
+    'daily-attempt-used': 'Today’s attempt has been used. A new challenge is available tomorrow.', 'game-closed': 'This game round has ended.',
+    'game-conflict': 'The round changed. Resume it before answering again.', 'game-rate-limited': 'Please wait before answering again.',
+    'game-not-found': 'This game round is unavailable.', 'invalid-game': 'Choose a valid game and difficulty.', 'invalid-answer': 'Choose a valid answer.',
+    'game-service-unavailable': 'Online games are temporarily unavailable.', 'analytics-unavailable': 'Usage counting is temporarily unavailable.',
+    'request-too-large': 'The upload is too large.', 'media-limit': 'Your photo upload allowance has been reached.', 'storage-configuration': 'Photo storage needs administrator attention.'
+  };
+  async function communityRequest(action, payload = {}, options = {}) {
+    assertEnabled();
+    if (!/^[a-z]+\.[a-z]+$/.test(action)) fail('invalid-input', 'Choose a valid action.');
+    const isPublic = options.public === true;
+    if (isPublic && !publicActions.has(action)) fail('forbidden', 'This action requires sign-in.');
+    const headers = { apikey: config.publishableKey };
+    if (!isPublic) {
+      const user = await requireUser();
+      if (options.expectedUserId && options.expectedUserId !== user.id) fail('sign-in-required', 'Your account changed. Select the photos again.');
+      const instance = await client(), result = await instance.auth.getSession();
+      if (result.error || !result.data?.session?.access_token || result.data.session.user?.id !== user.id) fail('sign-in-required', 'Sign in before continuing.');
+      headers.Authorization = 'Bearer ' + result.data.session.access_token;
+    }
+    const multipart = options.multipart === true;
+    let body = payload;
+    if (!multipart) {
+      body = JSON.stringify({ action, payload });
+      if (new TextEncoder().encode(body).length > 65536) fail('invalid-input', 'The information is too large.');
+      headers['Content-Type'] = 'application/json';
+    }
+    const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 45000);
+    try {
+      const response = await global.fetch(config.url.replace(/\/$/, '') + '/functions/v1/deshpath-community', { method: 'POST', headers, body, signal: controller.signal, credentials: 'omit', cache: 'no-store' });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || result?.error) {
+        const supplied = typeof result?.error === 'object' ? result.error.code : result?.code || result?.error;
+        const code = Object.hasOwn(communityMessages, supplied) ? supplied : response.status === 401 ? 'sign-in-required' : response.status === 403 ? 'forbidden' : response.status === 429 ? 'rate-limited' : 'community-unavailable';
+        fail(code, communityMessages[code] || 'The community service is unavailable. Your private journal is still saved.');
+      }
+      if (!result || typeof result !== 'object' || Array.isArray(result)) fail('community-unavailable', 'The community service returned an invalid response.');
+      return result;
+    } catch (error) {
+      if (error instanceof CloudError) throw error;
+      fail('community-unavailable', 'The community service could not be reached. Try again when online.');
+    } finally { clearTimeout(timeout); }
+  }
+  async function preparedJPEG(file) {
+    if (!file || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) fail('invalid-image', communityMessages['invalid-image']);
+    if (!file.size || file.size > 5 * 1024 * 1024) fail('file-too-large', communityMessages['file-too-large']);
+    let image;
+    try { image = await global.createImageBitmap(file); } catch { fail('invalid-image', communityMessages['invalid-image']); }
+    try {
+      if (!image.width || !image.height || image.width * image.height > 24000000) fail('invalid-image', 'Choose a photo with at most 24 megapixels.');
+      const ratio = Math.min(1, 1600 / Math.max(image.width, image.height), Math.sqrt(1600000 / (image.width * image.height)));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.width * ratio)); canvas.height = Math.max(1, Math.round(image.height * ratio));
+      const context = canvas.getContext('2d');
+      if (!context) fail('invalid-image', communityMessages['invalid-image']);
+      context.fillStyle = '#ffffff'; context.fillRect(0, 0, canvas.width, canvas.height); context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      for (const quality of [0.84, 0.7, 0.55, 0.4]) {
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+        if (blob?.type === 'image/jpeg' && blob.size <= 700 * 1024) return blob;
+      }
+      fail('file-too-large', 'This photo is too detailed. Resize it and try again.');
+    } finally { image.close?.(); }
+  }
   const api = {
     get enabled() { return enabled; },
     getStatus() { return { enabled, authReady, mode: enabled ? authReady ? 'cloud-ready' : 'cloud-public-only' : 'local', reason: enabled ? authReady ? null : 'auth-setup-pending' : config.enabled === true ? 'invalid-configuration' : 'not-configured' }; },
     getUser,
+    community: communityRequest,
+    publicCommunity(action, payload = {}) { return communityRequest(action, payload, { public: true }); },
+    async uploadCommunityPhoto(file, options = {}) {
+      assertEnabled();
+      if (options.consent !== true) fail('consent-required', communityMessages['consent-required']);
+      const user = await requireUser();
+      const prepared = await preparedJPEG(file), form = new FormData();
+      form.set('action', 'media.upload'); form.set('original', file, 'original-photo'); form.set('prepared', prepared, 'prepared.jpg');
+      form.set('caption', text(options.caption || '', 0, 200, 'Caption')); form.set('consent', 'true');
+      return communityRequest('media.upload', form, { multipart: true, expectedUserId: user.id });
+    },
     requestOtp: requestEmail,
     requestMagicLink: requestEmail,
     completeAuthCallback,

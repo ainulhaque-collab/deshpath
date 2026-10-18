@@ -14,6 +14,7 @@ const server = http.createServer(async (req,res) => {
     try { pathname=decodeURIComponent(url.pathname); } catch {res.writeHead(400);res.end('Bad request');return;}
     const requested=pathname==='/'?'index.html':pathname.replace(/^\/+/, '');
     if(requested.split(/[\\/]/).some(part=>part.startsWith('.'))){res.writeHead(403);res.end('Forbidden');return;}
+    if(/^(backend|tests|node_modules|dist)([\\/]|$)/i.test(requested)||/\.(md|sql|cjs|mjs|ps1|cmd)$/i.test(requested)){res.writeHead(404);res.end('Not found');return;}
     const filename=path.resolve(root,requested);
     if(!filename.startsWith(root+path.sep)&&filename!==path.join(root,'index.html')){res.writeHead(403);res.end('Forbidden');return;}
     const info=await stat(filename);if(!info.isFile())throw Object.assign(new Error('Not found'),{code:'ENOENT'});

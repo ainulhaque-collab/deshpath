@@ -162,11 +162,11 @@ window.initDeshMap = function ({$, $$, esc, bn, icon, storage, districts, divisi
         const printImage=document.createElement('img');printImage.id='mapPrintPoster';printImage.alt=title;printImage.src=canvas.toDataURL('image/png');document.body.append(printImage);
         const cleanup=()=>{document.body.classList.remove('map-printing');printImage.remove();window.removeEventListener('afterprint',cleanup);};
         window.addEventListener('afterprint',cleanup,{once:true});
-        try{await printImage.decode();document.body.classList.add('map-printing');window.print();}catch(error){cleanup();throw error;}
+        try{await printImage.decode();window.DESH_ACTIVITY?.record('export_prepared',{exportType:'bangladesh-map',format:'pdf'});document.body.classList.add('map-printing');window.DESH_ACTIVITY?.record('print_requested',{exportType:'bangladesh-map',format:'pdf'});window.print();}catch(error){cleanup();throw error;}
         toast(local('প্রিন্ট উইন্ডোতে PDF হিসেবে সেভ করতে পারেন।','You can save as PDF in the print window.'));
       }else{
         const mime=posterFormat==='jpeg'?'image/jpeg':'image/png',extension=posterFormat==='jpeg'?'jpg':'png';
-        const blob=await new Promise(resolve=>canvas.toBlob(resolve,mime,.94));if(!blob||blob.type!==mime)throw new Error('Image export failed');downloadBlob(blob,'deshpath-my-bangladesh.'+extension);toast(local('আপনার মানচিত্র ডাউনলোড হয়েছে।','Your map has been downloaded.'));
+        const blob=await new Promise(resolve=>canvas.toBlob(resolve,mime,.94));if(!blob||blob.type!==mime)throw new Error('Image export failed');window.DESH_ACTIVITY?.record('export_prepared',{exportType:'bangladesh-map',format:posterFormat});downloadBlob(blob,'deshpath-my-bangladesh.'+extension);window.DESH_ACTIVITY?.record('download_requested',{exportType:'bangladesh-map',format:posterFormat});toast(local('আপনার মানচিত্রের ডাউনলোড অনুরোধ পাঠানো হয়েছে।','Your map download has been requested.'));
       }
     }catch(error){console.error('Map export:',error);toast(tr('মানচিত্র তৈরি করা যায়নি। আবার চেষ্টা করুন।','The map could not be created. Please try again.'));}finally{button.disabled=false;}
   });

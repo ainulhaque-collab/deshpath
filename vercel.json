@@ -1,4 +1,7 @@
 {
+  "buildCommand":"node build-static.cjs",
+  "outputDirectory":"dist",
+  "framework":null,
   "headers":[
     {"source":"/(.*)","headers":[{"key":"X-Content-Type-Options","value":"nosniff"},{"key":"Referrer-Policy","value":"strict-origin-when-cross-origin"}]},
     {"source":"/sw.js","headers":[{"key":"Cache-Control","value":"no-cache"}]},

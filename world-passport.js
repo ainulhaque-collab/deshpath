@@ -4,7 +4,8 @@ window.initDeshWorldPassport=function(h){
   const root=$('#worldPassportRoot');if(!root||!window.DESH_WORLD)return null;
   const data=window.DESH_WORLD,countries=data.countries,countryById=new Map(countries.map(c=>[c.id,c]));
   const placeById=new Map(places.map(p=>[p.id,p]));
-  const readList=(key,valid)=>{const value=storage.get(key,[]);return new Set((Array.isArray(value)?value:[]).filter(id=>valid.has(id)));};
+  const pendingPlace=id=>typeof id==='string'&&/^community-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+  const readList=(key,valid)=>{const value=storage.get(key,[]);return new Set((Array.isArray(value)?value:[]).slice(0,key==='passportPlaces'?1100:300).filter(id=>valid.has(id)||(key==='passportPlaces'&&pendingPlace(id))));};
   let visited=readList('worldVisited',countryById),stamped=readList('passportPlaces',placeById);
   const colour=(key,fallback)=>getComputedStyle(document.documentElement).getPropertyValue(key).trim()||fallback;
   const themes={cobalt:colour('--brand','#2855C7'),coral:colour('--accent-strong','#B8442B'),ocean:colour('--map-theme-ocean','#26778F'),violet:colour('--map-theme-midnight','#7D5AA9')};
@@ -16,7 +17,7 @@ window.initDeshWorldPassport=function(h){
   const selectedCountries=()=>countries.filter(c=>visited.has(c.id));
   const selectedPlaces=()=>places.filter(p=>stamped.has(p.id));
   const dispatch=type=>window.dispatchEvent(new CustomEvent(type,{detail:getSnapshot()}));
-  function getSnapshot(){return {worldVisited:[...visited],worldTotal:countries.length,passportPlaces:[...stamped],passportTotal:places.length,worldCount:visited.size,passportCount:stamped.size};}
+  function getSnapshot(){return {worldVisited:[...visited],worldTotal:countries.length,passportPlaces:[...stamped],passportTotal:places.length,worldCount:visited.size,passportCount:selectedPlaces().length};}
   const worldHint=()=>tr('অ্যান্টার্কটিকা ছাড়া Natural Earth-এর ২৪১টি দেশ, নির্ভরশীল ও অন্যান্য মানচিত্রভুক্ত অঞ্চল। এটি সার্বভৌম রাষ্ট্রের সংখ্যা নয়। ক্ষুদ্র দ্বীপ তালিকা থেকে বাছাই করুন।','241 Natural Earth countries, dependencies and other mapped areas, excluding Antarctica. This is not a count of sovereign states. Select tiny islands from the list.');
   const monogram=name=>name.split(/[\s-]+/).slice(0,2).map(word=>[...word][0]||'').join('');
   function renderAvatar(){
@@ -46,7 +47,7 @@ window.initDeshWorldPassport=function(h){
   function renderPassport(){
     const bd=passportTab==='bangladesh',entries=bd?selectedPlaces():selectedCountries();
     root.querySelectorAll('[data-passport-tab]').forEach(button=>{button.tabIndex=button.dataset.passportTab===passportTab?0:-1;});
-    $('#wpBDStampCount',root).textContent=bn(stamped.size);$('#wpWorldStampCount',root).textContent=bn(visited.size);
+    $('#wpBDStampCount',root).textContent=bn(selectedPlaces().length);$('#wpWorldStampCount',root).textContent=bn(visited.size);
     const panel=$('#wpPassportPanel',root);panel.setAttribute('aria-labelledby',bd?'wpTabBangladesh':'wpTabWorld');
     panel.innerHTML=`<aside class="wp-passport-cover"><div class="wp-passport-cover-top"><span>DESHPATH</span><span>${bd?'BD / 01':'WORLD / 02'}</span></div><div class="wp-passport-emblem" aria-hidden="true">${icon('compass')}</div><span class="wp-passport-kicker">${tr('পথের স্মারক','A JOURNEY KEEPSAKE')}</span><h3>${bd?tr('বাংলাদেশের পথে','Across Bangladesh'):tr('বিশ্বের পথে','Around the world')}</h3><p class="wp-passport-holder">${esc(owner||tr('আপনার ভ্রমণের খাতা','Your travel journal'))}</p><div class="wp-passport-tally"><strong>${bn(entries.length)}</strong><span>${tr('টি স্মৃতি জমেছে','memories collected')}</span></div><div class="wp-passport-export"><button class="button" type="button" id="wpExportPassport">${icon('download')} ${tr('PNG রাখুন','Save PNG')}</button><button class="wp-print-button" type="button" id="wpPrintPassport">${icon('print')} ${tr('প্রিন্ট করুন','Print collection')}</button></div></aside><div class="wp-stamp-pages"><div class="wp-stamp-page-heading"><div><span class="wp-folio">${bd?'BANGLADESH / PLACES':'WORLD / PLACES'}</span><h3>${tr('ভ্রমণের সিলমোহর','The journey collection')}</h3></div><span>${bn(entries.length)} / ${bn(bd?places.length:countries.length)}</span></div><p class="wp-passport-note">${bd?tr('অ্যাপে থাকা '+bn(places.length)+'টি বাস্তব গন্তব্য থেকে যেখানে গিয়েছেন বাছাই করুন। প্রতিটি বাছাই এই পাসপোর্টে নিজের নকশার স্মৃতি যোগ করবে।','Choose the places you have visited from the '+places.length+' real destinations bundled with the app. Each choice adds an original keepsake stamp.'):tr('বিশ্ব মানচিত্রে বাছাই করা এলাকা থেকে এই সংগ্রহ নিজে থেকেই তৈরি হয়। পরিবর্তন করতে বিশ্ব মানচিত্রের বাছাই সম্পাদনা করুন।','This collection follows the areas selected on your world atlas. Edit your atlas selection to change the stamps.')}</p>${bd?`<div class="wp-place-picker">${places.map(p=>`<label class="wp-place-choice${stamped.has(p.id)?' selected':''}"><input type="checkbox" data-passport-place="${p.id}" ${stamped.has(p.id)?'checked':''}><span>${esc(placeText(p,'name'))}<small>${esc(districtName(districtById.get(p.district)))}</small></span></label>`).join('')}</div>`:`<a class="wp-back-to-atlas" href="#worldAtlas">${tr('বিশ্ব মানচিত্রে বাছাই করুন','Edit your world atlas')} ${icon('arrow-up-right')}</a>`}<div class="wp-stamp-grid">${entries.length?entries.map((entry,i)=>bd?stampMarkup(entry.id,placeText(entry,'name'),districtName(districtById.get(entry.district)),i):stampMarkup(entry.id,countryName(entry),continentName(entry.continent),i)).join(''):`<div class="wp-passport-empty">${icon('map-pin')}<h4>${tr('প্রথম স্মৃতিটি যোগ করুন','Add your first memory')}</h4><p>${bd?tr('ওপরের তালিকায় ঘুরে আসা জায়গা বাছাই করুন।','Select a place you have visited from the list above.'):tr('বিশ্ব মানচিত্রে একটি দেশ বা অঞ্চল বাছাই করুন।','Choose a country or area on the world atlas.')}</p></div>`}</div><p class="wp-local-note">${tr('শুধু এই ব্রাউজারে সেভ থাকে। প্রমাণিত ভ্রমণ বা সরকারি সিলমোহর নয়।','Stored in this browser only. These are personal keepsakes, not verified visits or official stamps.')}</p></div>`;
   }
@@ -77,13 +78,13 @@ window.initDeshWorldPassport=function(h){
     const checkbox=event.target.closest('[data-world-check]');if(checkbox){const id=checkbox.dataset.worldCheck;setCountry(id);root.querySelector(`[data-world-check="${id}"]`)?.focus();return;}
     const place=event.target.closest('[data-passport-place]');if(place){const id=place.dataset.passportPlace;if(!placeById.has(id))return;place.checked?stamped.add(id):stamped.delete(id);storage.set('passportPlaces',[...stamped]);renderPassport();root.querySelector(`[data-passport-place="${id}"]`)?.focus();dispatch('deshpath:passportchange');}
   });
-  function saveCanvas(canvas,filename){canvas.toBlob(blob=>{if(!blob){toast(tr('ছবি তৈরি করা যায়নি। আবার চেষ্টা করুন।','The image could not be created. Please try again.'));return;}const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);},'image/png');}
+  function saveCanvas(canvas,filename){canvas.toBlob(blob=>{if(!blob){toast(tr('ছবি তৈরি করা যায়নি। আবার চেষ্টা করুন।','The image could not be created. Please try again.'));return;}window.DESH_ACTIVITY?.record('export_prepared',{exportType:'world-map',format:'png'});const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=filename;document.body.append(link);link.click();window.DESH_ACTIVITY?.record('download_requested',{exportType:'world-map',format:'png'});link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);},'image/png');}
   async function saveImageUrl(src,filename){
     if(typeof src!=='string'||!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(src))throw Error('Invalid passport image');
     const response=await fetch(src);if(!response.ok)throw Error('Passport image unavailable');
     const blob=await response.blob();if(!blob.size||blob.type!=='image/png')throw Error('Invalid passport image');
     let url=null,link=null;
-    try{url=URL.createObjectURL(blob);link=document.createElement('a');link.href=url;link.download=filename;document.body.append(link);link.click();}
+    try{url=URL.createObjectURL(blob);link=document.createElement('a');link.href=url;link.download=filename;document.body.append(link);link.click();window.DESH_ACTIVITY?.record('download_requested',{exportType:filename.includes('bangladesh')?'bangladesh-passport':'world-passport',format:'png'});}
     finally{link?.remove();if(url)setTimeout(()=>URL.revokeObjectURL(url),30000);}
   }
   async function imageFromSvg(markup){return new Promise((resolve,reject)=>{const url=URL.createObjectURL(new Blob([markup],{type:'image/svg+xml;charset=utf-8'}));const image=new Image();image.onload=()=>{URL.revokeObjectURL(url);resolve(image);};image.onerror=()=>{URL.revokeObjectURL(url);reject(Error('SVG could not be rendered'));};image.src=url;});}
@@ -121,7 +122,8 @@ window.initDeshWorldPassport=function(h){
         ctx.fillStyle=colour('--text-muted','#596778');ctx.font='14px Arial,sans-serif';ctx.fillText('DESHPATH / PERSONAL TRAVEL JOURNAL',60,pageHeight-35);ctx.textAlign='right';ctx.fillText((page+1)+' / '+batches.length,width-60,pageHeight-35);ctx.textAlign='left';pages.push(canvas.toDataURL('image/png'));canvas.width=1;canvas.height=1;
         await new Promise(resolve=>setTimeout(resolve,0));
       }
-      if(print){target.document.open();target.document.write(`<!doctype html><html><head><title>Deshpath travel passport</title><style>body{margin:0;background:#fff}img{width:100%;display:block;break-after:page}img:last-child{break-after:auto}@page{margin:8mm}button{margin:15px;padding:12px 20px}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Print / Save as PDF</button>${pages.map(src=>`<img alt="Deshpath personal travel passport" src="${src}">`).join('')}</body></html>`);target.document.close();target.focus();}
+      window.DESH_ACTIVITY?.record('export_prepared',{exportType:bd?'bangladesh-passport':'world-passport',format:print?'pdf':'png'});
+      if(print){target.document.open();target.document.write(`<!doctype html><html><head><title>Deshpath travel passport</title><style>body{margin:0;background:#fff}img{width:100%;display:block;break-after:page}img:last-child{break-after:auto}@page{margin:8mm}button{margin:15px;padding:12px 20px}@media print{button{display:none}}</style></head><body><button id="passportPrintRequest">Print / Save as PDF</button>${pages.map(src=>`<img alt="Deshpath personal travel passport" src="${src}">`).join('')}</body></html>`);target.document.close();target.document.querySelector('#passportPrintRequest').addEventListener('click',()=>{window.DESH_ACTIVITY?.record('print_requested',{exportType:bd?'bangladesh-passport':'world-passport',format:'pdf'});target.print();});target.focus();}
       else if(pages.length===1)await saveImageUrl(pages[0],'deshpath-'+(bd?'bangladesh':'world')+'-passport.png');
       else{
         // One click per image avoids browser blocks on automatic multiple downloads.
@@ -130,8 +132,9 @@ window.initDeshWorldPassport=function(h){
     }catch{target?.close();toast(tr('পাসপোর্টের ছবি তৈরি করা যায়নি। আবার চেষ্টা করুন।','The passport image could not be created. Please try again.'));}finally{exportButton.disabled=false;exportButton.removeAttribute('aria-busy');}
   }
   function refreshLanguage(){mount();}
+  function refreshCatalog(){placeById.clear();for(const place of places)placeById.set(place.id,place);stamped=readList('passportPlaces',placeById);renderPassport();dispatch('deshpath:passportchange');}
   window.addEventListener('storage',event=>{if(['deshpath.worldVisited','deshpath.passportPlaces','deshpath.worldName','deshpath.worldTheme','deshpath.worldLabels',null].includes(event.key)){visited=readList('worldVisited',countryById);stamped=readList('passportPlaces',placeById);owner=String(storage.get('worldName','')).slice(0,48);theme=storage.get('worldTheme','cobalt');if(!Object.hasOwn(themes,theme))theme='cobalt';showLabels=storage.get('worldLabels',true)!==false;mount();dispatch('deshpath:worldchange');dispatch('deshpath:passportchange');}});
   window.DESH_I18N.onChange(refreshLanguage);mount();
   if(window.DESH_JOURNAL&&storage.get('worldAvatar',null)==='world-avatar')window.DESH_JOURNAL.media('getAll').then(items=>{const item=items.find(item=>item.id==='world-avatar');if(storage.get('worldAvatar',null)==='world-avatar'&&window.DESH_JOURNAL.validMedia(item)){avatar=item;renderAvatar();}}).catch(()=>{});
-  return {getSnapshot,refreshLanguage};
+  return {getSnapshot,refreshLanguage,refreshCatalog};
 };

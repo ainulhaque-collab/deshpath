@@ -15,6 +15,8 @@ const child=spawn(process.execPath,['server.mjs'],{cwd:root,env:{...process.env,
   const assets=await(await fetch(base+'offline-assets.json')).json();assert(assets.length>80);
   for(let i=0;i<assets.length;i+=8)await Promise.all(assets.slice(i,i+8).map(async asset=>{const response=await fetch(new URL(asset,base),{method:'HEAD'});assert.equal(response.status,200,asset);assert(Number(response.headers.get('content-length'))>0,asset);}));
   assert.equal((await fetch(base+'.git/config')).status,403,'Git metadata cannot be served');
+  assert.equal((await fetch(base+'backend/verify-community.sql')).status,404,'Operational SQL is not public');
+  assert.equal((await fetch(base+'tests/community.test.cjs')).status,404,'Test fixtures are not public');
   assert.equal((await fetch(base+'%2e%2e%5cREADME.md')).status,403,'Encoded traversal cannot escape root');
   assert.equal((await fetch(base,{method:'POST'})).status,405,'Static preview rejects writes');
   console.log('Static server checks passed: app, manifest MIME, PNG icons, '+assets.length+' offline assets, protected metadata/traversal and read-only methods.');
