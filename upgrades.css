@@ -1,0 +1,405 @@
+/* =========================================================
+   দেশপথ · Upgrade Pack — upgrades.css
+   5 enhancements layered on top of the existing aesthetic.
+   ========================================================= */
+
+/* ──────────────────────────────────────────────────────────
+   1. TRAVEL ADVISORY BAR
+   ────────────────────────────────────────────────────────── */
+#advisoryBar {
+  background: linear-gradient(90deg, #18377E 0%, #2855C7 60%, #1E43A3 100%);
+  color: #F7FAFF;
+  position: relative;
+  z-index: 35;
+  overflow: hidden;
+}
+#advisoryBar.adv-hidden { display: none !important; }
+.advisory-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 42px;
+  padding-inline: 0;
+}
+.advisory-ticker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.advisory-pulse {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #F28A63;
+  flex: none;
+  animation: advisoryPulse 1.8s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(242,138,99,.7);
+}
+@keyframes advisoryPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(242,138,99,.5); }
+  50% { box-shadow: 0 0 0 5px rgba(242,138,99,0); }
+}
+.advisory-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+  text-transform: uppercase; white-space: nowrap; color: #F28A63;
+  background: rgba(242,138,99,.15); padding: 2px 8px; border-radius: 100px;
+  flex: none;
+}
+.advisory-message {
+  font-size: 12px; line-height: 1.4; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; color: #B9C5D7;
+}
+.advisory-message strong { color: #F7FAFF; }
+.advisory-contacts {
+  display: flex; align-items: center; gap: 8px; flex: none;
+}
+.advisory-contact-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.18);
+  color: #F7FAFF; font-size: 11px; font-weight: 600;
+  padding: 5px 10px; border-radius: 100px; white-space: nowrap;
+  text-decoration: none; transition: background .2s;
+}
+.advisory-contact-btn:hover { background: rgba(255,255,255,.2); }
+.advisory-divider { width: 1px; height: 16px; background: rgba(255,255,255,.2); flex: none; }
+.advisory-dismiss {
+  background: none; border: none; color: rgba(255,255,255,.5);
+  font-size: 18px; line-height: 1; padding: 4px 8px;
+  cursor: pointer; flex: none; transition: color .2s;
+}
+.advisory-dismiss:hover { color: #F7FAFF; }
+
+/* ──────────────────────────────────────────────────────────
+   2. HERITAGE CRAFTS & MARKETPLACE
+   ────────────────────────────────────────────────────────── */
+.food-kind-tabs {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 18px; padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.food-kind-tab {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text-muted); font-size: 11px; font-weight: 550;
+  padding: 6px 12px; border-radius: 100px; cursor: pointer;
+  transition: all .18s; white-space: nowrap;
+}
+.food-kind-tab:hover { border-color: var(--border-strong); background: var(--surface-soft); }
+.food-kind-tab.active { background: var(--brand); color: #F7FAFF; border-color: var(--brand); }
+
+/* Verified badge on food/craft cards */
+.verified-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--success-bg); color: var(--success);
+  font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 100px;
+  letter-spacing: .3px; margin-top: 5px; margin-bottom: 4px;
+}
+
+/* Craft card action buttons */
+.food-card-actions {
+  display: flex; gap: 7px; margin-top: 10px; flex-wrap: wrap;
+}
+.food-card-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 600; padding: 6px 10px;
+  border-radius: 7px; border: 1px solid; cursor: pointer;
+  transition: all .18s; white-space: nowrap; font-family: inherit;
+}
+.food-card-btn.order-btn {
+  background: var(--brand); color: #F7FAFF; border-color: var(--brand);
+}
+.food-card-btn.order-btn:hover { background: var(--brand-hover); }
+.food-card-btn.seller-btn {
+  background: transparent; color: var(--brand); border-color: var(--border);
+}
+.food-card-btn.seller-btn:hover { background: var(--brand-soft); border-color: var(--brand); }
+
+/* GI craft tags */
+.craft-gi-tag {
+  display: inline-flex; align-items: center;
+  background: linear-gradient(135deg, #FFF1EA, #FFE4D6);
+  color: #B8442B; font-size: 9px; font-weight: 700;
+  padding: 2px 7px; border-radius: 100px; letter-spacing: .3px;
+  border: 1px solid #F7C5AD; white-space: nowrap;
+}
+
+/* ──────────────────────────────────────────────────────────
+   UPGRADE MODALS (Order + Seller KYC)
+   ────────────────────────────────────────────────────────── */
+.upgrade-modal-backdrop {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(32,39,51,.55); backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  opacity: 0; pointer-events: none; transition: opacity .22s;
+}
+.upgrade-modal-backdrop.open { opacity: 1; pointer-events: all; }
+.upgrade-modal {
+  background: var(--surface); border-radius: 20px; padding: 28px;
+  max-width: 480px; width: 100%; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 30px 80px rgba(32,39,51,.22);
+  transform: translateY(18px) scale(.97); transition: transform .22s;
+  position: relative;
+}
+.upgrade-modal-backdrop.open .upgrade-modal { transform: translateY(0) scale(1); }
+.upgrade-modal-header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  margin-bottom: 20px;
+}
+.upgrade-modal-header h3 { font-size: 18px; font-weight: 700; line-height: 1.4; }
+.upgrade-modal-close {
+  background: var(--surface-soft); border: none; width: 30px; height: 30px;
+  border-radius: 50%; font-size: 16px; cursor: pointer; flex: none;
+  display: grid; place-items: center; color: var(--text-muted);
+}
+.upgrade-modal-close:hover { background: var(--border); }
+.upgrade-modal .form-field { margin-bottom: 14px; }
+.upgrade-modal .form-field label {
+  display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px;
+}
+.upgrade-modal .form-field input,
+.upgrade-modal .form-field select,
+.upgrade-modal .form-field textarea {
+  width: 100%; border: 1px solid var(--border); border-radius: 9px;
+  padding: 9px 12px; font: inherit; font-size: 13px;
+  background: var(--surface); color: var(--ink); transition: border-color .15s;
+}
+.upgrade-modal .form-field input:focus,
+.upgrade-modal .form-field select:focus,
+.upgrade-modal .form-field textarea:focus { outline: none; border-color: var(--brand); }
+.upgrade-modal .form-field textarea { resize: vertical; min-height: 75px; height: 75px; }
+.upgrade-modal .modal-submit {
+  width: 100%; background: var(--brand); color: #F7FAFF;
+  border: none; border-radius: 10px; padding: 13px;
+  font: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: background .2s; margin-top: 6px;
+}
+.upgrade-modal .modal-submit:hover { background: #1E43A3; }
+.upgrade-modal .modal-success { text-align: center; padding: 16px 10px; }
+.upgrade-modal .modal-success .success-icon { font-size: 40px; display: block; margin-bottom: 10px; }
+.upgrade-modal .modal-success h4 { font-size: 17px; margin-bottom: 8px; }
+.upgrade-modal .modal-success p { font-size: 12px; color: var(--text-muted); line-height: 1.8; }
+.upgrade-modal .form-note { font-size: 10px; color: var(--text-subtle); margin-top: 10px; line-height: 1.7; }
+
+/* ──────────────────────────────────────────────────────────
+   3. FESTIVAL CALENDAR SLIDER
+   ────────────────────────────────────────────────────────── */
+.festival-section {
+  margin-top: 40px; padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+.festival-section-heading {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px; gap: 12px;
+}
+.festival-section-heading .fsh-text h3 {
+  font-size: 18px; font-weight: 650; line-height: 1.4; margin: 4px 0 0;
+}
+.festival-nav-arrows { display: flex; gap: 6px; }
+.festival-arrow {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer; display: grid; place-items: center;
+  font-size: 14px; color: var(--text-muted); transition: all .15s;
+}
+.festival-arrow:hover { background: var(--brand); color: #F7FAFF; border-color: var(--brand); }
+.festival-scroll {
+  display: flex; gap: 16px;
+  overflow-x: auto; padding-bottom: 12px;
+  scroll-snap-type: x mandatory; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.festival-scroll::-webkit-scrollbar { display: none; }
+.festival-card {
+  flex: none; width: 240px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden;
+  scroll-snap-align: start; transition: transform .2s, box-shadow .2s;
+}
+.festival-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+.festival-card-top {
+  height: 100px; position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.festival-emoji { font-size: 44px; }
+.festival-month-chip {
+  position: absolute; top: 10px; right: 10px;
+  background: var(--brand); color: #F7FAFF;
+  font-size: 9px; font-weight: 700; padding: 3px 8px;
+  border-radius: 100px; letter-spacing: .5px;
+}
+.festival-card-body { padding: 12px 14px; }
+.festival-card-body h4 { font-size: 13px; font-weight: 650; margin-bottom: 4px; line-height: 1.4; }
+.festival-card-body .festival-loc {
+  font-size: 10px; color: var(--text-subtle); margin-bottom: 5px;
+}
+.festival-card-body p { font-size: 10px; color: var(--text-muted); line-height: 1.7; }
+.festival-card-footer {
+  padding: 8px 14px; border-top: 1px solid var(--border);
+}
+.festival-district-link {
+  font-size: 10px; color: var(--brand); font-weight: 600;
+  background: none; border: none; cursor: pointer; padding: 0;
+  text-align: left;
+}
+.festival-district-link:hover { text-decoration: underline; }
+
+/* ──────────────────────────────────────────────────────────
+   4. COMMUNITY — VISUAL STORY PORTAL
+   ────────────────────────────────────────────────────────── */
+.community-story-portal { margin-top: 28px; }
+.community-portal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; gap: 14px; flex-wrap: wrap;
+}
+.community-portal-header h3 { font-size: 19px; font-weight: 700; }
+.add-story-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--brand); color: #F7FAFF;
+  border: none; border-radius: 10px; padding: 10px 18px;
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background .2s, transform .15s;
+}
+.add-story-btn:hover { background: #1E43A3; transform: translateY(-2px); }
+
+/* Masonry photo grid */
+.story-masonry { columns: 3; column-gap: 16px; }
+@media (max-width: 800px) { .story-masonry { columns: 2; } }
+@media (max-width: 480px) { .story-masonry { columns: 1; } }
+
+.story-masonry-item {
+  break-inside: avoid; margin-bottom: 16px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden;
+  transition: transform .2s, box-shadow .2s;
+}
+.story-masonry-item:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.story-masonry-item .story-img {
+  width: 100%; display: block; border-bottom: 1px solid var(--border);
+  object-fit: cover;
+}
+.story-masonry-item .story-img-placeholder {
+  width: 100%; background: var(--surface-soft);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; border-bottom: 1px solid var(--border);
+  min-height: 100px;
+}
+.story-masonry-body { padding: 12px 14px; }
+.story-masonry-body h4 { font-size: 13px; font-weight: 650; margin-bottom: 5px; line-height: 1.4; }
+.story-masonry-body p { font-size: 10px; color: var(--text-muted); line-height: 1.7; }
+.story-attribution {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);
+}
+.story-attribution .attr-name { font-size: 10px; color: var(--text-subtle); }
+.story-points-badge {
+  background: var(--brand-soft); color: var(--brand);
+  font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 100px;
+}
+.story-district-chip {
+  display: inline-flex; align-items: center;
+  font-size: 9px; color: var(--text-muted);
+  background: var(--surface-soft); padding: 2px 7px; border-radius: 100px;
+  margin-top: 4px;
+}
+.story-empty-portal {
+  text-align: center; padding: 36px 20px;
+  border: 1px dashed var(--border); border-radius: 16px;
+}
+.story-empty-portal .empty-emoji { font-size: 40px; display: block; margin-bottom: 10px; }
+.story-empty-portal h4 { font-size: 15px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+.story-empty-portal p { font-size: 11px; color: var(--text-muted); line-height: 1.8; }
+
+/* Story submission modal image upload area */
+.photo-upload-zone {
+  border: 2px dashed var(--border); border-radius: 12px;
+  padding: 20px; text-align: center; cursor: pointer;
+  transition: border-color .18s, background .18s;
+  background: var(--surface-soft);
+}
+.photo-upload-zone:hover { border-color: var(--brand); background: var(--brand-soft); }
+.photo-upload-zone input[type=file] { display: none; }
+.photo-upload-zone .upload-icon { font-size: 28px; display: block; margin-bottom: 6px; }
+.photo-upload-zone p { font-size: 11px; color: var(--text-muted); margin: 0; }
+.photo-upload-zone small { font-size: 9px; color: var(--text-subtle); }
+.photo-preview-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px;
+}
+.photo-preview-grid img {
+  width: 100%; height: 70px; object-fit: cover;
+  border-radius: 7px; border: 1px solid var(--border);
+}
+.compress-note {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; color: var(--success); margin-top: 6px;
+}
+
+/* ──────────────────────────────────────────────────────────
+   5. MAP CARD PERSONALIZATION
+   ────────────────────────────────────────────────────────── */
+.map-avatar-section {
+  margin-bottom: 14px; padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.avatar-upload-row {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
+}
+.avatar-preview {
+  width: 50px; height: 50px; border-radius: 50%;
+  border: 2px solid var(--border); overflow: hidden;
+  background: var(--surface-soft); flex: none;
+  display: grid; place-items: center; color: var(--text-subtle);
+  font-size: 20px; cursor: pointer; transition: border-color .15s;
+}
+.avatar-preview:hover { border-color: var(--brand); }
+.avatar-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.avatar-upload-label {
+  display: block; font-size: 11px; color: var(--brand); font-weight: 600;
+  cursor: pointer; line-height: 1.5;
+}
+.avatar-upload-label small { display: block; color: var(--text-subtle); font-size: 9px; font-weight: 400; }
+#avatarFileInput { display: none; }
+
+.traveler-percentile {
+  display: flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, var(--brand-soft), var(--accent-soft));
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 9px 12px;
+}
+.percentile-badge {
+  background: var(--brand); color: #F7FAFF;
+  font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 100px;
+  white-space: nowrap;
+}
+.percentile-label { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+
+.download-card-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, var(--brand-dark), var(--brand));
+  color: #F7FAFF; border: none; border-radius: 10px;
+  padding: 12px 16px; font: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: opacity .2s, transform .15s;
+  width: 100%; justify-content: center; margin-top: 8px;
+}
+.download-card-btn:hover { opacity: .88; transform: translateY(-1px); }
+
+/* Hidden canvas for card export */
+#fieldNotesCanvas { display: none; }
+
+/* ──────────────────────────────────────────────────────────
+   RESPONSIVE TWEAKS
+   ────────────────────────────────────────────────────────── */
+@media (max-width: 680px) {
+  .advisory-inner { height: auto; padding: 7px 0; flex-wrap: wrap; gap: 6px; }
+  .advisory-message { white-space: normal; font-size: 11px; }
+  .festival-card { width: 205px; }
+  .food-kind-tab { font-size: 10px; padding: 5px 9px; }
+  .upgrade-modal { padding: 20px; }
+}
+@media (max-width: 400px) {
+  .advisory-contacts { flex-wrap: wrap; gap: 5px; }
+  .festival-card { width: 180px; }
+}

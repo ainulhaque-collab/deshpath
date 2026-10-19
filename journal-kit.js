@@ -49,7 +49,7 @@
   }
   const backupKeys = new Set(['visited','favorites','theme','name','trip','planGenerated','quizBest','includeFoods','mapStyle','lang',
     'showDistrictNames','mapAvatar','photoAssignments','photoGroups','homeDistrict','worldVisited','worldTheme','worldName','worldLabels','worldAvatar',
-    'passportPlaces','passportName','passportCover','profile','contributions','reviews','gamesRecords','games','gameHistory','gameBests','personality']);
+    'passportPlaces','passportName','passportCover','profile','contributions','reviews','gamesRecords','games','gameHistory','gameBests','personality','districtNotes','community_contributions']);
   const readValues = () => {
     const values={};
     for(let i=0;i<localStorage.length;i++) {
@@ -115,6 +115,8 @@
     const scalar=value=>value===null||typeof value==='boolean'||text(value,500)||finite(value,0,864000);
     if(key==='games'||key==='gameBests'||key==='personality'||key.startsWith('games.'))return scalar(item)||(plain(item)&&Object.keys(item).length<=40&&Object.entries(item).every(([k,v])=>safeId(k)&&scalar(v)));
     if(key==='gameHistory')return Array.isArray(item)&&item.length<=100&&item.every(scalar);
+    if(key==='districtNotes')return plain(item)&&Object.keys(item).length<=64&&Object.entries(item).every(([id,v])=>ids.districts.has(id)&&plain(v)&&(v.note===undefined||text(v.note,2000))&&(v.date===undefined||text(v.date,40)));
+    if(key==='community_contributions')return Array.isArray(item)&&item.length<=100&&item.every(v=>plain(v)&&safeId(v.id));
     if(key==='photoGroups')return Array.isArray(item)&&item.length===0;
     return false;
   }
