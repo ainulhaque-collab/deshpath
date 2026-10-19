@@ -60,6 +60,12 @@ export async function handleCommunity(action,payload,ctx){
   if(action==='admin.setup'){object(payload,[]);return setupBuckets(ctx);}
   if(action==='admin.queue')return adminQueue(ctx,payload);
   if(action==='admin.dashboard'){object(payload,[]);return dashboard(ctx);}
+  if(action==='admin.visitors'){
+    object(payload,['limit']);const limit=payload.limit??50;
+    if(!Number.isInteger(limit)||limit<1||limit>50)fail('invalid-input');
+    const admin=await adminMember(ctx);await rate(ctx,'admin-visitors',60,3600);
+    return checked(await ctx.db.rpc('deshpath_admin_visitors',{p_actor:admin.id,p_limit:limit}));
+  }
   if(action==='admin.moderate'){
     const input=moderateInput(payload),admin=await adminMember(ctx);await rate(ctx,'admin-moderate',240,3600);let body=null,ids=null,revision=input.revision,staged=[];
     if(['submissions','reviews'].includes(input.kind)){const row=checked(await ctx.db.from(queueTables[input.kind]).select('*').eq('id',input.id).single());if(row.revision!==revision)fail('revision-conflict',409);if(input.payload){const data={...row.payload,...input.payload,id:row.id,photoIds:input.payload.photoIds||row.photo_ids,consent:true,...(input.kind==='reviews'?{placeId:row.place_id}:{})};const normalized=input.kind==='reviews'?reviewInput(data,{admin:true,now:ctx.now()}):submissionInput(data,{admin:true});body=normalized.payload;ids=normalized.photoIds;}else {body=row.payload;ids=row.photo_ids;}

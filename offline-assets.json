@@ -1,4 +1,6 @@
 [
+  "./admin-auth.css",
+  "./admin-auth.js",
   "./admin.js",
   "./app.js",
   "./assets/FONT-LICENSE.txt",
@@ -93,6 +95,8 @@
   "./map-ui.js",
   "./map.js",
   "./package.json",
+  "./page-router.css",
+  "./page-router.js",
   "./photo-map.js",
   "./planner.js",
   "./premium.css",

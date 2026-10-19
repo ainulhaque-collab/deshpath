@@ -19,6 +19,8 @@
   <link rel="stylesheet" href="journal-features.css">
   <link rel="stylesheet" href="community-online.css">
   <link rel="stylesheet" href="ranked-games.css">
+  <link rel="stylesheet" href="page-router.css">
+  <link rel="stylesheet" href="admin-auth.css">
   <script src="data.js" defer></script>
   <script src="foods.js" defer></script>
   <script src="food-images.js" defer></script>
@@ -37,10 +39,12 @@
   <script src="catalog.js" defer></script>
   <script src="ranked-games.js" defer></script>
   <script src="community-online.js" defer></script>
+  <script src="admin-auth.js" defer></script>
   <script src="admin.js" defer></script>
   <script src="community-profile.js" defer></script>
   <script src="map-ui.js" defer></script>
   <script src="planner.js" defer></script>
+  <script src="page-router.js" defer></script>
   <script src="app.js" defer></script>
   <script src="journey-art.js" defer></script>
   <script src="edition.js" defer></script>
@@ -55,8 +59,9 @@
       <div class="header-actions"><button class="language-toggle" id="languageToggle" type="button" aria-label="View this website in English" lang="en"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a18 18 0 0 0 0 18 18 18 0 0 0 0-18Z"/></svg><span>English</span></button><button class="saved-trigger" id="savedBtn" aria-label="পছন্দের জায়গা খুলুন"><span data-icon="heart"></span><span class="saved-label">পছন্দের জায়গা</span><span class="count-badge" id="savedCount">০</span></button><button id="menuBtn" class="icon-button menu-button" aria-label="মেনু খুলুন" aria-expanded="false"><span data-icon="menu"></span></button></div>
     </div>
   </header>
+  <nav class="journal-shortcuts container page-secondary-nav" aria-label="আরও ভ্রমণ অভিজ্ঞতা"><a href="#travelPassport">ভ্রমণ পাসপোর্ট</a><a href="#community">অজানা গল্প</a><a href="#profile">আমার প্রোফাইল</a><a href="#saved">পছন্দের জায়গা</a></nav>
   <main id="main">
-    <section id="home" class="hero container expedition-hero">
+    <section data-page="home" id="home" class="hero container expedition-hero">
       <div class="hero-copy">
         <div class="eyebrow expedition-kicker"><span class="eyebrow-line"></span> দেশপথ · আপনার ভ্রমণের খাতা</div>
         <h1>আপনার পথের গল্পে<br><span>নিজের বাংলাদেশ।</span></h1>
@@ -74,16 +79,16 @@
         <div class="field-ticket"><span class="ticket-icon" data-icon="route"></span><div><span>পরের সফরের প্রথম পাতা</span><strong>গন্তব্য আপনি, পথের সঙ্গী দেশপথ।</strong></div><span class="ticket-perforation" aria-hidden="true"></span><span class="ticket-index" aria-hidden="true">BD<br>64</span></div>
       </div>
     </section>
-    <div class="container"><div class="stats-strip"><div><strong>৬৪<span>টি</span></strong><span>জেলা, অসংখ্য অভিজ্ঞতা</span></div><div><strong>৮<span>টি</span></strong><span>বিভাগের রঙিন গল্প</span></div><div><strong id="placeTotal">১৬<span>টি</span></strong><span>বাছাই করা গন্তব্য</span></div><div class="stats-promise"><span data-icon="leaf"></span><p>স্মৃতি সাথে নিন,<br><strong>প্রকৃতিকে রাখুন নিজের মতো।</strong></p></div></div></div>
+    <div class="container" data-page="home"><div class="stats-strip"><div><strong>৬৪<span>টি</span></strong><span>জেলা, অসংখ্য অভিজ্ঞতা</span></div><div><strong>৮<span>টি</span></strong><span>বিভাগের রঙিন গল্প</span></div><div><strong id="placeTotal">১৬<span>টি</span></strong><span>বাছাই করা গন্তব্য</span></div><div class="stats-promise"><span data-icon="leaf"></span><p>স্মৃতি সাথে নিন,<br><strong>প্রকৃতিকে রাখুন নিজের মতো।</strong></p></div></div></div>
 
-    <section class="journey-paths container" aria-label="আপনার ভ্রমণের তিন অধ্যায়">
+    <section data-page="home" class="journey-paths container" aria-label="আপনার ভ্রমণের তিন অধ্যায়">
       <a class="journey-chapter" href="#my-map"><span class="chapter-index" aria-hidden="true">01</span><div><span class="chapter-kicker">আপনার ভ্রমণের নথি</span><h2>দেখা পথের মানচিত্র</h2><p>ঘুরে আসা জেলা বাছুন। রঙে বা খাবারের ছবিতে রাখুন সেই পথের স্মৃতি।</p></div><span class="chapter-arrow" data-icon="arrow-up-right"></span></a>
       <a class="journey-chapter" href="#explore"><span class="chapter-index" aria-hidden="true">02</span><div><span class="chapter-kicker">নতুন গল্পের ঠিকানা</span><h2>পরের গন্তব্যের খোঁজে</h2><p>পাহাড়, সমুদ্র আর ঐতিহ্যের ঠিকানায় খুঁজে নিন আপনার পরের বিরতি।</p></div><span class="chapter-arrow" data-icon="arrow-up-right"></span></a>
       <a class="journey-chapter" href="#planner"><span class="chapter-index" aria-hidden="true">03</span><div><span class="chapter-kicker">আপনার মতো একটি সফর</span><h2>ছুটির দিনগুলো গুছিয়ে নিন</h2><p>গন্তব্য, সময় আর বাজেট মিলিয়ে সাজান নিজের সফরের খসড়া।</p></div><span class="chapter-arrow" data-icon="arrow-up-right"></span></a>
     </section>
 
-    <nav class="journal-shortcuts container" aria-label="আরও ভ্রমণ অভিজ্ঞতা"><a href="#worldAtlas">বিশ্ব মানচিত্র</a><a href="#travelPassport">ভ্রমণ পাসপোর্ট</a><a href="#games">খেলার আসর</a><a href="#community">অজানা গল্প</a><a href="#profile">আমার প্রোফাইল</a></nav>
-    <section id="my-map" class="section map-section">
+
+    <section data-page="my-map" id="my-map" class="section map-section">
       <div class="container"><div class="section-heading"><div><div class="eyebrow">আপনার পথের গল্প</div><h2>বাংলাদেশের কতটুকু দেখেছেন?</h2><p>ঘুরে আসা জেলাগুলো বেছে নিন। রঙে রঙে ফুটে উঠুক আপনার ভ্রমণের গল্প।</p></div><span class="section-number">01 / MY BANGLADESH</span></div>
         <div class="map-workspace">
           <div class="map-canvas-panel"><div class="map-topline"><span><i class="status-dot"></i> আপনার ভ্রমণ মানচিত্র</span><button class="small-button" id="resetMap"><span data-icon="rotate"></span> নতুন করে শুরু</button></div><div id="mapMount" class="map-mount" aria-label="বাংলাদেশের ইন্টারেক্টিভ জেলা মানচিত্র"></div><div id="mapTooltip" class="map-tooltip" hidden></div><div class="map-bottomline"><span><i class="legend-visited"></i> ঘুরেছি</span><span><i class="legend-unvisited"></i> এখনো যাওয়া হয়নি</span><span class="map-hint">জেলায় চাপ দিয়ে বেছে নিন</span></div><div class="map-poster-brand">দেশপথ<span>প্রতিটি পথেই নতুন গল্প</span></div></div>
@@ -102,11 +107,11 @@
       </div>
     </section>
 
-    <section id="explore" class="section explore-section container"><div class="section-heading"><div><div class="eyebrow">কিছু পথ ডাকছে আপনাকে</div><h2>পরের গন্তব্য কোথায়?</h2><p>কখনো পাহাড়, কখনো সমুদ্র। মনের মতো জায়গাটা খুঁজে নিন।</p></div><span class="section-number">02 / FIND YOUR NEXT</span></div><div class="explore-toolbar"><div class="filter-tabs" role="group" aria-label="গন্তব্যের ধরন"><button class="filter-tab active" data-category="all">সব জায়গা</button><button class="filter-tab" data-category="nature"><span data-icon="leaf"></span> প্রকৃতি</button><button class="filter-tab" data-category="adventure"><span data-icon="mountain"></span> পাহাড় ও অভিযান</button><button class="filter-tab" data-category="beach"><span data-icon="waves"></span> সমুদ্র</button><button class="filter-tab" data-category="heritage"><span data-icon="landmark"></span> ঐতিহ্য</button></div><label class="search-box place-search"><span data-icon="search"></span><input id="placeSearch" placeholder="জায়গা বা জেলা খুঁজুন" aria-label="দর্শনীয় স্থান খুঁজুন"></label></div><div class="places-grid" id="placesGrid"></div><div class="explore-more"><button class="button secondary" id="loadMore">আরও গন্তব্য দেখুন <span data-icon="arrow-down"></span></button><p id="placesResult" aria-live="polite"></p></div></section>
+    <section data-page="explore" id="explore" class="section explore-section container"><div class="section-heading"><div><div class="eyebrow">কিছু পথ ডাকছে আপনাকে</div><h2>পরের গন্তব্য কোথায়?</h2><p>কখনো পাহাড়, কখনো সমুদ্র। মনের মতো জায়গাটা খুঁজে নিন।</p></div><span class="section-number">02 / FIND YOUR NEXT</span></div><div class="explore-toolbar"><div class="filter-tabs" role="group" aria-label="গন্তব্যের ধরন"><button class="filter-tab active" data-category="all">সব জায়গা</button><button class="filter-tab" data-category="nature"><span data-icon="leaf"></span> প্রকৃতি</button><button class="filter-tab" data-category="adventure"><span data-icon="mountain"></span> পাহাড় ও অভিযান</button><button class="filter-tab" data-category="beach"><span data-icon="waves"></span> সমুদ্র</button><button class="filter-tab" data-category="heritage"><span data-icon="landmark"></span> ঐতিহ্য</button></div><label class="search-box place-search"><span data-icon="search"></span><input id="placeSearch" placeholder="জায়গা বা জেলা খুঁজুন" aria-label="দর্শনীয় স্থান খুঁজুন"></label></div><div class="places-grid" id="placesGrid"></div><div class="explore-more"><button class="button secondary" id="loadMore">আরও গন্তব্য দেখুন <span data-icon="arrow-down"></span></button><p id="placesResult" aria-live="polite"></p></div></section>
 
-    <section class="container"><div class="story-banner"><div><span class="eyebrow">ঘোরার ফাঁকে একটু খেলা</span><h2>দেশটাকে কতটা চেনেন?</h2><p>৫টি ছোট্ট প্রশ্নে ঝালিয়ে নিন বাংলাদেশের গল্প।</p></div><div class="banner-decoration" aria-hidden="true">৬৪<span>জেলা<br>অসংখ্য গল্প</span></div><button class="button light" id="quizBtn">চলুন খেলি <span data-icon="arrow-up-right"></span></button></div></section>
+    <section data-page="home" class="container"><div class="story-banner"><div><span class="eyebrow">ঘোরার ফাঁকে একটু খেলা</span><h2>দেশটাকে কতটা চেনেন?</h2><p>৫টি ছোট্ট প্রশ্নে ঝালিয়ে নিন বাংলাদেশের গল্প।</p></div><div class="banner-decoration" aria-hidden="true">৬৪<span>জেলা<br>অসংখ্য গল্প</span></div><button class="button light" id="quizBtn">চলুন খেলি <span data-icon="arrow-up-right"></span></button></div></section>
 
-    <section id="planner" class="section planner-section container"><div class="section-heading"><div><div class="eyebrow">পথটা এবার গুছিয়ে নেওয়া যাক</div><h2>আপনার ছুটি, আপনার মতো।</h2><p>গন্তব্য আর বাজেট দিন। কয়েক মুহূর্তে সাজিয়ে নিন ভ্রমণের খসড়া।</p></div><span class="section-number">03 / MAKE A LITTLE PLAN</span></div><div class="planner-layout"><form id="plannerForm" class="planner-form"><div class="form-title"><span data-icon="route"></span><h3>ট্রিপের ছোট্ট পরিচয়</h3></div>
+    <section data-page="planner" id="planner" class="section planner-section container"><div class="section-heading"><div><div class="eyebrow">পথটা এবার গুছিয়ে নেওয়া যাক</div><h2>আপনার ছুটি, আপনার মতো।</h2><p>গন্তব্য আর বাজেট দিন। কয়েক মুহূর্তে সাজিয়ে নিন ভ্রমণের খসড়া।</p></div><span class="section-number">03 / MAKE A LITTLE PLAN</span></div><div class="planner-layout"><form id="plannerForm" class="planner-form"><div class="form-title"><span data-icon="route"></span><h3>ট্রিপের ছোট্ট পরিচয়</h3></div>
 <label class="field-label">যাত্রা শুরু</label>
 <div class="location-pair">
   <div><label class="location-sub-label" for="originDivision">বিভাগ</label><select id="originDivision" required aria-label="যাত্রা শুরুর বিভাগ"></select></div>
@@ -125,12 +130,13 @@
 <label class="field-label" for="budget">মোট বাজেট <span>(সবাই মিলিয়ে)</span></label><div class="budget-input"><span>৳</span><input id="budget" type="number" min="1000" max="10000000" step="100" placeholder="যেমন: ১৫০০০" required></div>
 <button class="button primary" type="submit">আমার ট্রিপ সাজিয়ে দিন <span data-icon="sparkles"></span></button><p class="form-footnote">এটি পরিকল্পনার খসড়া। যাতায়াত, আবহাওয়া ও প্রবেশের নিয়ম যাওয়ার আগে যাচাই করুন।</p></form><div id="planResult" class="plan-result" aria-live="polite"><div class="plan-empty"><span class="plan-illustration" data-icon="route"></span><span class="eyebrow">একটু পরিকল্পনায়, অনেকটা নিশ্চিন্ত</span><h3>দারুণ একটা সফরের শুরু এখানেই</h3><p>পাশের ফর্মে আপনার গন্তব্যগুলো যোগ করুন।<br>দিনভিত্তিক ঘোরার ধারণা ও বাজেটের ভাগ এখানে দেখাবে।</p><div class="empty-plan-steps"><span>গন্তব্য বাছাই</span><i>→</i><span>প্ল্যান তৈরি</span><i>→</i><span>পথে নামা</span></div></div></div></div></section>
     <div id="worldPassportRoot" class="section container"></div>
-    <section id="games" class="section container"><div id="gamesRoot"></div></section>
-    <section id="community" class="section container"><div id="communityRoot"></div></section>
-    <section id="profile" class="section container"><div id="profileRoot"></div></section>
-    <section class="responsible container"><span data-icon="leaf"></span><div><h3>দেশটা আমাদের। যত্নটাও আমাদের।</h3><p>প্লাস্টিক ফিরিয়ে আনুন, স্থানীয় মানুষকে সম্মান করুন, আর প্রকৃতিতে রেখে আসুন শুধু পায়ের ছাপ।</p></div></section>
+    <section data-page="games" id="games" class="section container"><div id="gamesRoot"></div></section>
+    <section data-page="community" id="community" class="section container"><div id="communityRoot"></div></section>
+    <section id="saved" class="section container saved-page" data-page="saved"><div id="savedPageRoot"></div></section>
+    <section data-page="profile" id="profile" class="section container"><div id="profileRoot"></div></section>
+    <section data-page="home" class="responsible container"><span data-icon="leaf"></span><div><h3>দেশটা আমাদের। যত্নটাও আমাদের।</h3><p>প্লাস্টিক ফিরিয়ে আনুন, স্থানীয় মানুষকে সম্মান করুন, আর প্রকৃতিতে রেখে আসুন শুধু পায়ের ছাপ।</p></div></section>
   </main>
-  <footer class="site-footer"><div class="container footer-top"><div><a class="brand" href="#home"><span>দেশপথ<span class="brand-dot">.</span></span></a><p>চেনা দেশের অচেনা গল্পে।<br>নিজের দেশকে নতুন করে দেখার একটি ছোট্ট উদ্যোগ।</p></div><div><strong>পথের খোঁজ</strong><a href="#my-map">আমার মানচিত্র</a><a href="#explore">গন্তব্য খুঁজুন</a><a href="#planner">ট্রিপ প্ল্যানার</a></div><div><strong>কিছু কথা</strong><button id="aboutBtn">দেশপথ সম্পর্কে</button><button id="privacyBtn">তথ্য ও গোপনীয়তা</button><button id="creditsBtn">ম্যাপ ও ছবির কৃতজ্ঞতা</button></div><div class="footer-note"><span>MADE FOR THE EXPLORER IN YOU</span><p>একটু সময় বের করুন।<br><b>একটা নতুন পথে হাঁটুন।</b></p><span class="bangladesh-flag" aria-label="বাংলাদেশের পতাকা"><i></i></span></div></div><div class="container footer-bottom"><span>© ২০২৬ দেশপথ · ভালোবাসায় বাংলাদেশ</span><span>৬৪ জেলা। ৮ বিভাগ। এক বাংলাদেশ।</span></div></footer>
+  <footer class="site-footer"><div class="container footer-top"><div><a class="brand" href="#home"><span>দেশপথ<span class="brand-dot">.</span></span></a><p>চেনা দেশের অচেনা গল্পে।<br>নিজের দেশকে নতুন করে দেখার একটি ছোট্ট উদ্যোগ।</p></div><div><strong>পথের খোঁজ</strong><a href="#my-map">আমার মানচিত্র</a><a href="#explore">গন্তব্য খুঁজুন</a><a href="#planner">ট্রিপ প্ল্যানার</a></div><div><strong>কিছু কথা</strong><button id="aboutBtn">দেশপথ সম্পর্কে</button><button id="privacyBtn">তথ্য ও গোপনীয়তা</button><button id="creditsBtn">ম্যাপ ও ছবির কৃতজ্ঞতা</button><a id="adminEntry" href="#admin">পরিচালক লগইন</a></div><div class="footer-note"><span>MADE FOR THE EXPLORER IN YOU</span><p>একটু সময় বের করুন।<br><b>একটা নতুন পথে হাঁটুন।</b></p><span class="bangladesh-flag" aria-label="বাংলাদেশের পতাকা"><i></i></span></div></div><div class="container footer-bottom"><span>© ২০২৬ দেশপথ · ভালোবাসায় বাংলাদেশ</span><span>৬৪ জেলা। ৮ বিভাগ। এক বাংলাদেশ।</span></div></footer>
   <dialog id="contentDialog" class="content-dialog"><button class="dialog-close icon-button" id="closeDialog" aria-label="বন্ধ করুন"><span data-icon="x"></span></button><div id="dialogBody"></div></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>

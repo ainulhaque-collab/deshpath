@@ -1,5 +1,13 @@
 # Deshpath Supabase connection
 
+## Pages and owner account controls — 19 October 2026
+
+`admin-visitors.sql` adds a service-only, SECURITY INVOKER summary function. Both the Edge handler and the function check current Deshpath membership. It returns at most 50 Deshpath profiles and each profile's most recent five game results; no shared Auth directory, journal, email, original photo paths or metadata is projected. The public browser cannot call this RPC directly.
+
+`admin-auth.js` adds password sign-in and a human-operated password setting for the verified owner. The browser verifies the actual Auth user and server-side admin membership. Setting uses a nonpersisted SDK client bound to the verified owner's session to prevent an account switch redirecting a credential update. The owner must enter and submit their password personally. No password or Auth settings were changed automatically. This credential belongs to the same shared Supabase Auth account, so the form discloses that scope and requires explicit acknowledgement. Existing email-link sign-in remains available.
+
+The page router retains the feature DOM and existing hash URLs; it never reads or writes Auth credentials, query codes or personal drafts. New router, admin authentication and visitor authorization regression tests run with the existing test runner. Real password creation/sign-in remains a human handoff; mock tests never create credentials or send email.
+
 ## Community release v2 — 18 October 2026
 
 The moderated photo/destination/review system, owner administration, in-app notifications and server-scored online games are documented in [COMMUNITY.md](COMMUNITY.md) and [GAMES.md](GAMES.md). These additive changes preserve the v1 journal and text tables described below. Selected submission photographs now upload only after explicit consent; private journal/gallery photographs still do not upload automatically. The earlier deployment record below describes v1, not the current photo workflow.

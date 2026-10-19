@@ -177,6 +177,55 @@
     if (!user) fail('sign-in-required', 'Sign in with a verified email before using cloud storage.');
     return user;
   }
+  function passwordValue(value,setting=false) {
+    if(typeof value!=='string'||value.length<(setting?12:1)||value.length>(setting?128:1024))fail(setting?'invalid-password':'invalid-credentials',setting?'Choose a password between 12 and 128 characters.':'The email or password could not be verified.');
+    return value; // Preserve deliberate leading/trailing spaces; never trim a password.
+  }
+  function passwordFailure(error,setting=false) {
+    const limited=providerError(error);if(limited?.code==='cloud-rate-limited')throw limited;
+    const code=String(error?.code||'').toLowerCase();
+    if(setting){
+      if(['reauthentication_needed','reauthentication_not_valid','session_not_found','session_expired','refresh_token_not_found','refresh_token_already_used'].includes(code))fail('password-reauth-required','Sign in again using an email link, then retry the password change.');
+      if(['current_password_required','current_password_incorrect'].includes(code))fail('password-current-required','The account requires its current password before a password change.');
+      if(code==='weak_password')fail('weak-password','Choose a stronger password that meets the account requirements.');
+      if(code==='same_password')fail('password-unchanged','Choose a different password from the current one.');
+    }
+    if(Number(error?.status)>=500||error?.name==='AuthRetryableFetchError')fail('auth-unavailable','Sign-in is temporarily unavailable. Try again when the connection is stable.');
+    fail(setting?'password-update-failed':'invalid-credentials',setting?'The password could not be changed. Sign in again and check the account requirements.':'The email or password could not be verified.');
+  }
+  async function signInWithPassword(value,suppliedPassword) {
+    assertEnabled();if(!authReady)fail('auth-not-ready','Sign-in is waiting for the site owner to finish its settings.');
+    const email=emailValue(value),password=passwordValue(suppliedPassword),instance=await client();
+    let result;try{result=await instance.auth.signInWithPassword({email,password});}catch(error){const limited=providerError(error);if(limited?.code==='cloud-rate-limited')throw limited;fail('auth-unavailable','Sign-in is temporarily unavailable. Try again when the connection is stable.');}
+    if(result.error)passwordFailure(result.error);
+    let user;try{user=await getUser();}catch{fail('auth-unavailable','Your sign-in could not be verified. Please try again.');}
+    if(!user||result.data?.user?.id!==user.id)fail('invalid-credentials','The email or password could not be verified.');
+    return user;
+  }
+  async function setMyAdminPassword(suppliedPassword,options={}) {
+    assertEnabled();if(!authReady)fail('auth-not-ready','Sign-in is waiting for the site owner to finish its settings.');
+    const password=passwordValue(suppliedPassword,true),user=await requireUser();
+    const membership=await communityRequest('admin.status',{}, {expectedUserId:user.id});
+    if(membership.isAdmin!==true||membership.role!=='owner')fail('admin-required','Only the verified Deshpath owner can use this password setup form.');
+    const instance=await client(),sessionResult=await instance.auth.getSession(),session=sessionResult.data?.session;
+    if(sessionResult.error||session?.user?.id!==user.id||!session.access_token||!session.refresh_token)fail('password-reauth-required','Sign in again before changing the password.');
+    const data={password};
+    if(options.currentPassword!==undefined&&options.currentPassword!=='')data.current_password=passwordValue(options.currentPassword);
+    if(options.nonce!==undefined&&options.nonce!==''){if(typeof options.nonce!=='string'||!/^\d{6,10}$/.test(options.nonce))fail('invalid-input','Enter the account reauthentication code.');data.nonce=options.nonce;}
+    // Bind this change to the verified owner session. Another tab switching the
+    // main client to a different account must not redirect this credential change.
+    const sdk=await loadSDK(),temporary=sdk.createClient(config.url,config.publishableKey,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'deshpath.cloud.password-change'}});
+    try{
+      const bound=await temporary.auth.setSession({access_token:session.access_token,refresh_token:session.refresh_token});if(bound.error)fail('password-reauth-required','Sign in again before changing the password.');
+      const verified=await temporary.auth.getUser();if(verified.error||safeUser(verified.data?.user)?.id!==user.id)fail('password-reauth-required','Sign in again before changing the password.');
+      let result;try{result=await temporary.auth.updateUser(data);}catch{fail('auth-unavailable','The password service could not be reached. Please try again.');}
+      if(result.error)passwordFailure(result.error,true);
+      return {updated:true,user:safeUser(result.data?.user)||user};
+    }catch(error){
+      if(error instanceof CloudError)throw error;
+      fail('auth-unavailable','The password service could not be reached. Please try again.');
+    }finally{try{await temporary.auth.dispose?.();}catch{/* Cleanup must not change the password request outcome. */}}
+  }
   function journalSnapshot(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) fail('invalid-journal', 'The journal must be a JSON object.');
     let json;
@@ -269,6 +318,8 @@
     get enabled() { return enabled; },
     getStatus() { return { enabled, authReady, mode: enabled ? authReady ? 'cloud-ready' : 'cloud-public-only' : 'local', reason: enabled ? authReady ? null : 'auth-setup-pending' : config.enabled === true ? 'invalid-configuration' : 'not-configured' }; },
     getUser,
+    signInWithPassword,
+    setMyAdminPassword,
     community: communityRequest,
     publicCommunity(action, payload = {}) { return communityRequest(action, payload, { public: true }); },
     async uploadCommunityPhoto(file, options = {}) {
