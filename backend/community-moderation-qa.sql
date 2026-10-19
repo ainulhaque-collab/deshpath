@@ -87,12 +87,12 @@ begin
         select status into persisted_status from public.deshpath_review_submissions where id=state_source;
         select status,payload into publication_status,persisted_snapshot from public.deshpath_visit_reviews where source_id=state_source;
       end if;
-      if result->'item'->>'status'<>expected_status or persisted_status<>expected_status then
+      if (result->'item'->>'status') is distinct from expected_status or persisted_status is distinct from expected_status then
         raise exception 'Decision/status mismatch for % / %: returned %, persisted %',test_kind,decision,result->'item'->>'status',persisted_status;
       end if;
       if decision='archive' then
-        if publication_status<>'archived' then raise exception 'Archive failed to unpublish %',test_kind;end if;
-      elsif publication_status<>'published' or persisted_snapshot is distinct from published_snapshot then
+        if publication_status is distinct from 'archived' then raise exception 'Archive failed to unpublish %',test_kind;end if;
+      elsif publication_status is distinct from 'published' or persisted_snapshot is distinct from published_snapshot then
         raise exception 'Unapproved % revision changed published % snapshot',decision,test_kind;
       end if;
     end loop;
